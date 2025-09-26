@@ -12,68 +12,68 @@
 
 # 南北海道定住自立圈
 koiki_1_codes <- c(01202,
-                   01236,
-                   01331,
-                   01332,
-                   01333,
-                   01334,
-                   01337,
-                   01343,
-                   01345,
-                   01346,
-                   01347,
-                   01361,
-                   01362,
-                   01363,
-                   01364,
-                   01367,
-                   01370,
-                   01371)
+                  01236,
+                  01331,
+                  01332,
+                  01333,
+                  01334,
+                  01337,
+                  01343,
+                  01345,
+                  01346,
+                  01347,
+                  01361,
+                  01362,
+                  01363,
+                  01364,
+                  01367,
+                  01370,
+                  01371)
 # 北・北海道中央圈域定住自立圈
 koiki_2_codes <- c(01220,
-                   01221,
-                   01464,
-                   01465,
-                   01468,
-                   01469,
-                   01470,
-                   01471,
-                   01472,
-                   01512,
-                   01513,
-                   01514,
-                   01562)
+                  01221,
+                  01464,
+                  01465,
+                  01468,
+                  01469,
+                  01470,
+                  01471,
+                  01472,
+                  01512,
+                  01513,
+                  01514,
+                  01562)
 
 # さっぽろ連携中枢都市圏
 koiki_3_codes <- c(01101,
-                   01102,
-                   01103,
-                   01104,
-                   01105,
-                   01106,
-                   01107,
-                   01108,
-                   01109,
-                   01110,
-                   01203,
-                   01210,
-                   01217,
-                   01224,
-                   01231,
-                   01234,
-                   01235,
-                   01303,
-                   01304,
-                   01423,
-                   01428)
+                  01102,
+                  01103,
+                  01104,
+                  01105,
+                  01106,
+                  01107,
+                  01108,
+                  01109,
+                  01110,
+                  01203,
+                  01210,
+                  01217,
+                  01224,
+                  01231,
+                  01234,
+                  01235,
+                  01303,
+                  01304,
+                  01423,
+                  01428)
 
 # Load data
 pref_map <- readRDS(here(paste("data-out/map/",
-                               as.character(pref_code),
-                               "_",
-                               as.character(pref_name),
-                               "_lh_2022_map.rds",
-                               sep = "")))
+                              as.character(pref_code),
+                              "_",
+                              as.character(pref_name),
+                              "_lh_2022_map.rds",
+                              sep = "")))
 
 prefadj <- readRDS(here(paste("data-out/adj/",
                               as.character(pref_code),
@@ -83,15 +83,15 @@ prefadj <- readRDS(here(paste("data-out/adj/",
                               sep = "")))
 
 sim_smc_pref_ref <- readRDS(here(paste("data-out/smc-out/",
-                                       as.character(pref_code),
-                                       "_",
-                                       as.character(pref_name),
-                                       "_",
-                                       as.character(sim_type),
-                                       "_",
-                                       as.character(nsims * 4),
-                                       ".Rds",
-                                       sep = "")))
+                                      as.character(pref_code),
+                                      "_",
+                                      as.character(pref_name),
+                                      "_",
+                                      as.character(sim_type),
+                                      "_",
+                                      as.character(nsims * 4),
+                                      ".Rds",
+                                      sep = "")))
 
 # Get plans matrix
 pref_smc_plans <- redist::get_plans_matrix(sim_smc_pref_ref)
@@ -160,12 +160,12 @@ sf_use_s2(FALSE)
 for (i in 1:nrow(pref_map)) {
   # Convert multipolygons to polygons
   new_rows <- data.frame(unit = i,
-                         code = pref_map[i, ]$code,
-                         sub_code = pref_map[i, ]$sub_code,
-                         mun_name = pref_map[i, ]$mun_name,
-                         sub_name = pref_map[i, ]$sub_name,
-                         gun_code = pref_map[i, ]$gun_code,
-                         geometry = sf::st_cast(pref_map[i, ]$geometry, "POLYGON"))
+                        code = pref_map[i, ]$code,
+                        sub_code = pref_map[i, ]$sub_code,
+                        mun_name = pref_map[i, ]$mun_name,
+                        sub_name = pref_map[i, ]$sub_name,
+                        gun_code = pref_map[i, ]$gun_code,
+                        geometry = sf::st_cast(pref_map[i, ]$geometry, "POLYGON"))
 
   # Order by size
   new_rows <- new_rows %>%
@@ -208,12 +208,12 @@ sf_use_s2(FALSE)
 for (i in 1:length(add_small_unit)){
   add_small <-
     data.frame(unit = add_small_unit[i],
-               code = pref_map[add_small_unit[i], ]$code,
-               sub_code = pref_map[add_small_unit[i], ]$sub_code,
-               mun_name = pref_map[add_small_unit[i], ]$mun_name,
-               sub_name = pref_map[add_small_unit[i], ]$sub_name,
-               gun_code = pref_map[add_small_unit[i], ]$gun_code,
-               geometry = sf::st_cast(pref_map[add_small_unit[i], ]$geometry, "POLYGON"))
+              code = pref_map[add_small_unit[i], ]$code,
+              sub_code = pref_map[add_small_unit[i], ]$sub_code,
+              mun_name = pref_map[add_small_unit[i], ]$mun_name,
+              sub_name = pref_map[add_small_unit[i], ]$sub_name,
+              gun_code = pref_map[add_small_unit[i], ]$gun_code,
+              geometry = sf::st_cast(pref_map[add_small_unit[i], ]$geometry, "POLYGON"))
 
   # order by size
   add_small <- add_small %>%
@@ -304,12 +304,12 @@ summary(sim_smc_pref_sample)
 sim_smc_pref_ref %>%
   partisan_metrics_japan(pref_map) %>%
   dplyr::left_join(results %>%
-                     dplyr::select(mun_split,
-                                   gun_split,
-                                   koiki_split,
-                                   max_to_min,
-                                   draw),
-                   by = "draw") %>%
+                    dplyr::select(mun_split,
+                                  gun_split,
+                                  koiki_split,
+                                  max_to_min,
+                                  draw),
+                  by = "draw") %>%
   summary()
 
 # Check the validation of the sampled plans
@@ -319,19 +319,19 @@ validate_analysis_japan(sim_smc_pref_sample, pref_map, pref_code, pref_name)
 # `redist_plans` object
 write_rds(sim_smc_pref_sample,
           here(paste("data-out/plans/",
-                     as.character(pref_code),
-                     "_",
-                     as.character(pref_name),
-                     "_lh_2022_plans.rds",
-                     sep = "")),
+                    as.character(pref_code),
+                    "_",
+                    as.character(pref_name),
+                    "_lh_2022_plans.rds",
+                    sep = "")),
           compress = "xz")
 
 # Export `redist_plans` summary statistics to a csv file
 as_tibble(sim_smc_pref_sample) %>%
   mutate(across(where(is.numeric), format, digits = 4, scientific = FALSE)) %>%
   write_csv(here(paste("data-out/stats/",
-                       as.character(pref_code),
-                       "_",
-                       as.character(pref_name),
-                       "_lh_2022_stats.csv",
-                       sep = "")))
+                      as.character(pref_code),
+                      "_",
+                      as.character(pref_name),
+                      "_lh_2022_stats.csv",
+                      sep = "")))

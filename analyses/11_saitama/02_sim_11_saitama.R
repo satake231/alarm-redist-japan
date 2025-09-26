@@ -38,11 +38,11 @@ prefadj <- redist::redist.adjacency(pref)
 
 # Create redist.map object
 pref_map <- redist::redist_map(pref,
-                               ndists = ndists_new,
-                               pop_tol= pop_tol,
-                               total_pop = pop,
-                               adj = prefadj,
-                               planarize = 4612)
+                              ndists = ndists_new,
+                              pop_tol= pop_tol,
+                              total_pop = pop,
+                              adj = prefadj,
+                              planarize = 4612)
 
 # Define unique id (necessary for partial SMC)
 pref_map <- pref_map %>%
@@ -52,21 +52,21 @@ pref_map <- pref_map %>%
 pref_map_merged <- pref_map %>%
   # Convert codes to character
   mutate(code = as.character(code),
-         sub_code = as.character(sub_code),
-         gun_code = as.character(gun_code)) %>%
+        sub_code = as.character(sub_code),
+        gun_code = as.character(gun_code)) %>%
   # Only freeze the "gun" that are kept together in the same district under the old plan
   # Make a code to determine which gun to freeze
   # If a gun is one of the gun in `gun_exception`, don't freeze it
   mutate(freeze_code = if_else(gun_code %in% c(gun_exception),
-                               code,
-                               # For Saitama, we will merge 秩父市 and 秩父郡.
-                               # 秩父郡 is made up of discontiguous parts.
-                               # In order to make sure that 秩父郡 is not split
-                               # and to ensure that we do not create discontiguous districts,
-                               # we merge it with its adjacent municipality (秩父市).
-                               if_else(gun_code %in% as.character(c(110322, 11360)),
-                                       as.character(11360), # Assign code for 秩父郡
-                                       gun_code))) %>%
+                              code,
+                              # For Saitama, we will merge 秩父市 and 秩父郡.
+                              # 秩父郡 is made up of discontiguous parts.
+                              # In order to make sure that 秩父郡 is not split
+                              # and to ensure that we do not create discontiguous districts,
+                              # we merge it with its adjacent municipality (秩父市).
+                              if_else(gun_code %in% as.character(c(110322, 11360)),
+                                      as.character(11360), # Assign code for 秩父郡
+                                      gun_code))) %>%
   # Group by and merge by `gun_code`
   merge_by(freeze_code, by_existing = FALSE, drop_geom = FALSE) %>%
   # Drop column `freeze_code`
@@ -79,9 +79,9 @@ pref_map_merged <- pref_map %>%
 # North: Others (Since we don’t allow 秩父郡 to be split into different districts, we assigned 秩父郡東秩父村 within 秩父地域振興センター)
 # Both the old enacted plan and the newly enacted plan respect these two regions, except 秩父郡東秩父村.
 south <- c(11227, 11228, 11229, 11230, 11235, 11245, 11324,
-           11208, 11209, 11215, 11225, 11242,
-           11201, 11212, 11239, 11241, 11326, 11327,
-           "11341~11342~11343~11346~11347~11348~11349")
+          11208, 11209, 11215, 11225, 11242,
+          11201, 11212, 11239, 11241, 11326, 11327,
+          "11341~11342~11343~11346~11347~11348~11349")
 north <- setdiff(unique(pref_map_merged$code), south)
 # Calculate target population & number of districts
 target_pop <- sum(pref_map$pop)/ndists_new
@@ -193,12 +193,12 @@ sf_use_s2(FALSE)
 for (i in 1:nrow(south_map)) {
   # Convert multipolygons to polygons
   new_rows <- data.frame(unit = i,
-                         code = south_map[i, ]$code,
-                         sub_code = south_map[i, ]$sub_code,
-                         mun_name = south_map[i, ]$mun_name,
-                         sub_name = south_map[i, ]$sub_name,
-                         gun_code = south_map[i, ]$gun_code,
-                         geometry = sf::st_cast(south_map[i, ]$geometry, "POLYGON"))
+                        code = south_map[i, ]$code,
+                        sub_code = south_map[i, ]$sub_code,
+                        mun_name = south_map[i, ]$mun_name,
+                        sub_name = south_map[i, ]$sub_name,
+                        gun_code = south_map[i, ]$gun_code,
+                        geometry = sf::st_cast(south_map[i, ]$geometry, "POLYGON"))
 
   # Order by size
   new_rows <- new_rows %>%
@@ -241,12 +241,12 @@ sf_use_s2(FALSE)
 for (i in 1:length(add_small_unit)){
   add_small <-
     data.frame(unit = add_small_unit[i],
-               code = south_map[add_small_unit[i], ]$code,
-               sub_code = south_map[add_small_unit[i], ]$sub_code,
-               mun_name = south_map[add_small_unit[i], ]$mun_name,
-               sub_name = south_map[add_small_unit[i], ]$sub_name,
-               gun_code = south_map[add_small_unit[i], ]$gun_code,
-               geometry = sf::st_cast(south_map[add_small_unit[i], ]$geometry, "POLYGON"))
+              code = south_map[add_small_unit[i], ]$code,
+              sub_code = south_map[add_small_unit[i], ]$sub_code,
+              mun_name = south_map[add_small_unit[i], ]$mun_name,
+              sub_name = south_map[add_small_unit[i], ]$sub_name,
+              gun_code = south_map[add_small_unit[i], ]$gun_code,
+              geometry = sf::st_cast(south_map[add_small_unit[i], ]$geometry, "POLYGON"))
 
   # order by size
   add_small <- add_small %>%
@@ -292,8 +292,8 @@ mainland_south_adj <- redist::redist.adjacency(mainland_south)
 
 # Check valid results
 results_south_no_multi$valid <- check_contiguous(south_smc_plans_no_multi,
-                                                 mainland_south,
-                                                 mainland_south_adj)
+                                                mainland_south,
+                                                mainland_south_adj)
 
 # Filter out plans with discontiguities
 functioning_results_south <- results_south_no_multi %>%
@@ -321,22 +321,22 @@ sim_smc_south %>%
   dplyr::filter(draw %in% valid_sample_south | draw == "lh_2022") %>%
   partisan_metrics_japan(south_map) %>%
   dplyr::left_join(results_sample_south %>%
-                     dplyr::select(mun_split,
-                                   gun_split,
-                                   max_to_min,
-                                   draw),
-                   by = "draw") %>%
+                    dplyr::select(mun_split,
+                                  gun_split,
+                                  max_to_min,
+                                  draw),
+                  by = "draw") %>%
   summary()
 
 # All simulated plans
 sim_smc_south %>%
   partisan_metrics_japan(south_map) %>%
   dplyr::left_join(results_south %>%
-                     dplyr::select(mun_split,
-                                   gun_split,
-                                   max_to_min,
-                                   draw),
-                   by = "draw") %>%
+                    dplyr::select(mun_split,
+                                  gun_split,
+                                  max_to_min,
+                                  draw),
+                  by = "draw") %>%
   summary()
 
 ##### Pull everything together #####
@@ -344,8 +344,8 @@ init <- prep_particles(
   map = pref_map_merged,
   map_plan_list = list(
     south = list(map = south_map,
-                 plans = sim_smc_south_sample %>%
-                   mutate(keep = district > 0))
+                plans = sim_smc_south_sample %>%
+                  mutate(keep = district > 0))
   ),
   uid = uid,
   dist_keep = keep,
@@ -388,16 +388,16 @@ sim_smc_pref_pullback <- pullback(sim_smc_pref)
 pref %>%
   as.data.frame() %>%
   select("code",
-         "gun_code",
-         "pop",
-         "mun_name",
-         "sub_name") %>%
+        "gun_code",
+        "pop",
+        "mun_name",
+        "sub_name") %>%
   write_excel_csv(here(paste("temp/",
-                             as.character(pref_code),
-                             "_",
-                             as.character(pref_name),
-                             "_lh_2022.csv",
-                             sep = "")))
+                            as.character(pref_code),
+                            "_",
+                            as.character(pref_name),
+                            "_lh_2022.csv",
+                            sep = "")))
 
 # Read back the CSV to environment
 dist_lh_2022 <- read_csv(here(paste("data-raw/lh_2022/",
@@ -416,7 +416,7 @@ sim_smc_pref_ref <- add_reference(plans = sim_smc_pref_pullback,
 # Add `total_pop`
 for(i in 1:ndists_new){
   sim_smc_pref_ref$total_pop[which(sim_smc_pref_ref$draw == "lh_2022" &
-                                     sim_smc_pref_ref$district == i)] <-
+                                    sim_smc_pref_ref$district == i)] <-
     # Population in District i
     sum(dist_lh_2022$pop[which(dist_lh_2022$lh_2022 == i)])
 }
@@ -426,11 +426,11 @@ attr(sim_smc_pref_ref, "prec_pop") <- pref_map$pop
 
 # Save pref object, pref_map object, adjacency list, and simulation data
 saveRDS(pref, here(paste("data-out/shapefile/",
-                         as.character(pref_code),
-                         "_",
-                         as.character(pref_name),
-                         ".Rds",
-                         sep = "")))
+                        as.character(pref_code),
+                        "_",
+                        as.character(pref_name),
+                        ".Rds",
+                        sep = "")))
 
 saveRDS(prefadj, here(paste("data-out/adj/",
                             as.character(pref_code),
@@ -441,20 +441,20 @@ saveRDS(prefadj, here(paste("data-out/adj/",
 
 # pref_map object: to be uploaded to Dataverse
 write_rds(pref_map, here(paste("data-out/map/",
-                               as.character(pref_code),
-                               "_",
-                               as.character(pref_name),
-                               "_lh_2022_map.rds",
-                               sep = "")),
+                              as.character(pref_code),
+                              "_",
+                              as.character(pref_name),
+                              "_lh_2022_map.rds",
+                              sep = "")),
           compress = "xz")
 
 saveRDS(sim_smc_pref_ref, here(paste("data-out/smc-out/",
-                                     as.character(pref_code),
-                                     "_",
-                                     as.character(pref_name),
-                                     "_",
-                                     as.character(sim_type),
-                                     "_",
-                                     as.character(nsims_all * 8),
-                                     ".Rds",
-                                     sep = "")))
+                                    as.character(pref_code),
+                                    "_",
+                                    as.character(pref_name),
+                                    "_",
+                                    as.character(sim_type),
+                                    "_",
+                                    as.character(nsims_all * 8),
+                                    ".Rds",
+                                    sep = "")))

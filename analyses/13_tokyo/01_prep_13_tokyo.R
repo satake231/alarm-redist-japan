@@ -107,9 +107,9 @@ pref_mun <- dplyr::bind_rows(
     dplyr::filter(code %in% c(split_code, split_code_lh_2022) == FALSE) %>%
     dplyr::group_by(code, mun_name) %>%
     dplyr::summarise(sub_code = first(sub_code),
-                     sub_name = "-",
-                     pop = sum(pop),
-                     geometry = sf::st_union(geometry)) %>%
+                    sub_name = "-",
+                    pop = sum(pop),
+                    geometry = sf::st_union(geometry)) %>%
     dplyr::left_join(pref_HoC_PR, by = "mun_name"),
   # Municipalities with splits
   pref_join %>%

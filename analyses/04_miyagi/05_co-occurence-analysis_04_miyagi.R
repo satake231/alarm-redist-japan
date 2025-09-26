@@ -167,6 +167,57 @@ ggplot() +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", legend.title = element_blank())
 
+
+# Plot Optimal Plan Map
+if(ndists_new > 6){
+  optimal_boundary_colored <- optimal_boundary %>%
+    mutate(color = redist:::color_graph(prefadj, as.integer(district)))
+} else {
+  optimal_boundary_colored <- optimal_boundary %>%
+    mutate(color = district)
+}
+
+# 色パレットを定義
+PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F')
+
+# 1. 最小の人口格差（票の格差）の値を取得
+disparity_value <- min(results_sample$max_to_min)
+
+# 2. プロットに表示するためのテキストを作成
+disparity_text <- sprintf("票の格差: %.3f", disparity_value)
+
+# Plot Optimal Plan Map
+ggplot() +
+  geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), color = NA) +
+  scale_fill_manual(values = PAL, guide = "none") +
+  
+  geom_sf(data = boundary, aes(color = type, linetype = type, linewidth = type),
+          show.legend = "line", fill = NA) +
+  scale_color_manual(values = if("old_boundary" %in% ls()) 
+                      c("#606264", "#373C38", "#606264") 
+                    else c("#373C38", "#606264")) +
+  scale_linetype_manual(values = if("old_boundary" %in% ls()) 
+                          c("dotted", "solid", "solid") 
+                        else c("solid", "solid")) +
+  scale_discrete_manual("linewidth", values = if("old_boundary" %in% ls()) 
+                          c(0.3, 0.3, 0.6) 
+                        else c(0.3, 0.6)) +
+  
+  geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
+  geom_sf_text(data = cities, aes(label = names), size = 3,
+              color = "black",
+              family = "HiraginoSans-W3") +
+  # 3. 計算した票の格差をプロットの左下に追加
+  annotate(geom = "text", 
+          x = 139.3, y = 35.7,             # 表示する位置（経度、緯度）。地図に合わせて調整してください。
+          label = disparity_text,          # 表示するテキスト
+          size = 4,                        # 文字サイズ
+          hjust = 0,                       # 左寄せ
+          family = "HiraginoSans-W3") +
+  ggthemes::theme_map(base_family = "HiraginoSans-W3") +
+  theme(legend.position = "right", legend.title = element_blank()) +
+  ggtitle("Optimal Plan (Minimum Population Deviation)")
+
 # Save files
 # Remove the irrelevant objects
 rm(cl_co,

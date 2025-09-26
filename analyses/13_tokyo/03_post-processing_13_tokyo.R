@@ -9,11 +9,11 @@
 
 # Load data
 pref_map <- readRDS(here(paste("data-out/map/",
-                               as.character(pref_code),
-                               "_",
-                               as.character(pref_name),
-                               "_lh_2022_map.rds",
-                               sep = "")))
+                              as.character(pref_code),
+                              "_",
+                              as.character(pref_name),
+                              "_lh_2022_map.rds",
+                              sep = "")))
 
 prefadj <- readRDS(here(paste("data-out/adj/",
                               as.character(pref_code),
@@ -23,15 +23,15 @@ prefadj <- readRDS(here(paste("data-out/adj/",
                               sep = "")))
 
 sim_smc_pref_ref <- readRDS(here(paste("data-out/smc-out/",
-                                       as.character(pref_code),
-                                       "_",
-                                       as.character(pref_name),
-                                       "_",
-                                       as.character(sim_type),
-                                       "_",
-                                       as.character(nsims_all * 4),
-                                       ".Rds",
-                                       sep = "")))
+                                      as.character(pref_code),
+                                      "_",
+                                      as.character(pref_name),
+                                      "_",
+                                      as.character(sim_type),
+                                      "_",
+                                      as.character(nsims_all * 4),
+                                      ".Rds",
+                                      sep = "")))
 
 # Get plans matrix
 pref_smc_plans <- redist::get_plans_matrix(sim_smc_pref_ref)
@@ -95,12 +95,12 @@ sf_use_s2(FALSE)
 for (i in 1:nrow(pref_map)) {
   # Convert multipolygons to polygons
   new_rows <- data.frame(unit = i,
-                         code = pref_map[i, ]$code,
-                         sub_code = pref_map[i, ]$sub_code,
-                         mun_name = pref_map[i, ]$mun_name,
-                         sub_name = pref_map[i, ]$sub_name,
-                         gun_code = pref_map[i, ]$gun_code,
-                         geometry = sf::st_cast(pref_map[i, ]$geometry, "POLYGON"))
+                        code = pref_map[i, ]$code,
+                        sub_code = pref_map[i, ]$sub_code,
+                        mun_name = pref_map[i, ]$mun_name,
+                        sub_name = pref_map[i, ]$sub_name,
+                        gun_code = pref_map[i, ]$gun_code,
+                        geometry = sf::st_cast(pref_map[i, ]$geometry, "POLYGON"))
 
   # Order by size
   new_rows <- new_rows %>%
@@ -237,8 +237,8 @@ mainland_adj <- geomander::add_edge(mainland_adj,
 
 # Check whether districts are contiguous
 results_no_multi$valid <- check_contiguous(pref_smc_plans_no_multi,
-                                           mainland,
-                                           mainland_adj)
+                                          mainland,
+                                          mainland_adj)
 
 # Filter out plans with discontiguities
 functioning_results <- results_no_multi %>%
@@ -271,12 +271,12 @@ summary(sim_smc_pref_sample)
 sim_smc_pref_ref %>%
   partisan_metrics_japan(pref_map) %>%
   dplyr::left_join(results %>%
-                     dplyr::select(mun_split,
-                                   gun_split,
-                                   koiki_split,
-                                   max_to_min,
-                                   draw),
-                   by = "draw") %>%
+                    dplyr::select(mun_split,
+                                  gun_split,
+                                  koiki_split,
+                                  max_to_min,
+                                  draw),
+                  by = "draw") %>%
   summary()
 
 # Check the validation of the sampled plans
@@ -286,19 +286,19 @@ validate_analysis_japan(sim_smc_pref_sample, pref_map, pref_code, pref_name)
 # `redist_plans` object
 write_rds(sim_smc_pref_sample,
           here(paste("data-out/plans/",
-                     as.character(pref_code),
-                     "_",
-                     as.character(pref_name),
-                     "_lh_2022_plans.rds",
-                     sep = "")),
+                    as.character(pref_code),
+                    "_",
+                    as.character(pref_name),
+                    "_lh_2022_plans.rds",
+                    sep = "")),
           compress = "xz")
 
 # Export `redist_plans` summary statistics to a csv file
 as_tibble(sim_smc_pref_sample) %>%
   mutate(across(where(is.numeric), format, digits = 4, scientific = FALSE)) %>%
   write_csv(here(paste("data-out/stats/",
-                       as.character(pref_code),
-                       "_",
-                       as.character(pref_name),
-                       "_lh_2022_stats.csv",
-                       sep = "")))
+                      as.character(pref_code),
+                      "_",
+                      as.character(pref_name),
+                      "_lh_2022_stats.csv",
+                      sep = "")))

@@ -9,7 +9,7 @@
 #' @export
 #'
 
-download_2017_HoR <- function(pref_code){
+download_2017_HoR_PR <- function(pref_code){
 
   # check if `data-raw `folder exists
   if(!file.exists("data-raw")){

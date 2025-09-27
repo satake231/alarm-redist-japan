@@ -1,0 +1,122 @@
+###############################################################################
+# Download and prepare data for `01_hokkaido` analysis
+# © ALARM Project, May 2023
+###############################################################################
+
+# Set up packages
+library(redist)
+library(geomander)
+library(sf)
+library(tidyverse)
+library(here)
+
+# Pull functions
+setwd(here("function"))
+files.sources <- list.files()
+sapply(files.sources, source)
+rm(files.sources)
+setwd(here())
+
+# TODO: Define parameters for simulation
+# In Hokkaido, the redistricting committee uses the 振興局 grouping as an administrative boundary.
+# Thus, We treat this 振興局 as `gun` (county) in the program,
+# because there is no 郡 (gun) in Hokkaido.
+sim_type <- "smc"
+nsims <- 20000 # Set so that the number of valid plans > 5,000
+pref_code <- 01
+pref_name <- "hokkaido"
+lakes_removed <- c()
+ndists_new <- 12
+ndists_old <- 12
+pop_tol <- 0.33
+lh_old_max_to_min <- 1.871
+lh_old_mun_split <- 2
+lh_old_gun_split <- 0
+lh_old_koiki_split <- 2
+lh_2021_max_to_min <- 1.858
+lh_2021_mun_split <- 3
+lh_2021_gun_split <- 1
+lh_2021_koiki_split <- 2
+
+# Split the municipalities that are split under the status quo
+split_code <- c(01102,
+                01107)
+# 札幌市北区、札幌市西区
+
+# Municipalities that are split under the newly enacted plan
+split_code_lh_2021 <- c(01102,
+                        01107,
+                        01104)
+# 札幌市北区、札幌市西区、札幌市白石区
+
+# Code of 郡 that are split under the status quo
+gun_exception <- c("ishikari") # 石狩振興局
+
+# Change time limit
+options(timeout = 300)
+
+# Download Census shapefile
+pref_shp_2020 <- download_shp(pref_code)
+
+# Clean Census shapefile
+pref_shp_cleaned <- pref_shp_2020 %>%
+  clean_jcdf()
+# Note that S_NAME shows the name of the first entry of the areas grouped
+# in the same KIHON-1 unit (i.e. disregard --丁目,字--)
+
+# Download 2020 Census data at 小地域-level (size of Japanese population)
+pref_pop_2020 <- download_pop_2020(pref_code)
+
+# Download 2017 House of Councillors election data (Proportional Representation)
+pref_2017_HoR_PR <- download_2017_HoR_PR(pref_code)
+
+# Download 2021 House of Councillors election data (Proportional Representation)
+pref_2021_HoR_PR <- download_2021_HoR_PR(pref_code)
+
+####2. Urban Prefectures########
+
+# Clean 2020 Census data at the 小地域-level
+pref_pop_cleaned <- clean_pref_pop_2020(pref_pop_2020, sub_code = TRUE) %>%
+  rename(code = mun_code)
+
+# Clean 2017 House of Councillors election data
+pref_2017_HoR_PR_cleaned <- clean_pref_2017_HoR_PR(pref_2017_HoR_PR)
+
+# Clean 2021 House of Councillors election data
+pref_2021_HoR_PR_cleaned <- clean_pref_2021_HoR_PR(pref_2021_HoR_PR)
+
+# Estimate baseline votes
+pref_HoR_PR <- clean_pref_HoR_PR(pref_2017_HoR_PR_cleaned, pref_2021_HoR_PR_cleaned)
+
+# Match `pref_shp_cleaned` with `pref_pop_cleaned`
+pref_join <- pref_shp_cleaned %>%
+  dplyr::mutate(sub_code = as.numeric(KIHON1)) %>%
+  dplyr::left_join(pref_pop_cleaned, by = c("code", "sub_code")) %>%
+  dplyr::select(code, mun_name, sub_code, sub_name, pop, geometry)
+
+# Freeze municipalities except for `split_code` and `split_code_lh_2021`
+# Calculate the baseline votes per municipality
+pref_mun <- dplyr::bind_rows(
+  # Municipalities without splits
+  pref_join %>%
+    dplyr::filter(code %in% c(split_code, split_code_lh_2021) == FALSE) %>%
+    dplyr::group_by(code, mun_name) %>%
+    dplyr::summarise(sub_code = first(sub_code),
+                    sub_name = "-",
+                    pop = sum(pop),
+                    geometry = sf::st_union(geometry)) %>%
+    dplyr::left_join(pref_HoR_PR, by = "mun_name"),
+  # Municipalities with splits
+  pref_join %>%
+    dplyr::filter(code %in% c(split_code, split_code_lh_2021)) %>%
+    dplyr::group_by(code) %>%
+    dplyr::mutate(pop_ratio = pop / sum(pop)) %>%
+    dplyr::left_join(pref_HoR_PR, by = "mun_name") %>%
+    dplyr::mutate(dplyr::across(tidyselect::starts_with("nv"), ~ .x * pop_ratio)) %>%
+    dplyr::select(-pop_ratio)
+)
+
+# Confirm that the population figure matches that of the redistricting committee
+sum(pref_mun$pop)
+sum(pref_mun$nv_ldp)
+sum(pref_HoR_PR$nv_ldp)

@@ -21,12 +21,14 @@ setwd(here())
 # In Hokkaido, the redistricting committee uses the 振興局 grouping as an administrative boundary.
 # Thus, We treat this 振興局 as `gun` (county) in the program,
 # because there is no 郡 (gun) in Hokkaido.
+year <- 2050
+
 sim_type <- "smc"
 nsims <- 20000 # Set so that the number of valid plans > 5,000
 pref_code <- 01
 pref_name <- "hokkaido"
 lakes_removed <- c()
-ndists_new <- 12
+ndists_new <- 10 # 2050年の予測される定数は10
 ndists_old <- 12
 pop_tol <- 0.33
 lh_old_max_to_min <- 1.871

@@ -4,9 +4,6 @@
 ###############################################################################
 
 ####-------------- 2. Method for Urban Prefectures-------------------------####
-# Specify year
-year <- 2030
-
 # Re-order and add 郡 codes
 pref <- pref_mun %>%
   arrange(code, sub_code) %>%
@@ -275,7 +272,7 @@ pref_map_merged <- pref_map %>%
                               gun_code)) %>%
   # For Hokkaido, there is an additional municipality that are split in the newly enacted plan.
   # Thus, we will also allow that municipality to be split (3 municipality in total.)
-  mutate(freeze_code = if_else(freeze_code %in% split_code_lh_year,
+  mutate(freeze_code = if_else(freeze_code %in% split_code_lh_2022,
                               str_c(code, sub_code),
                               freeze_code)) %>%
   # Group by and merge by `gun_code`
@@ -298,7 +295,7 @@ sim_smc_pref <- redist::redist_smc(
   # Vector of municipality codes
   counties = pref_map_merged$code,
   constraints = constr_pref,
-  pop_temper = 0.05)
+  pop_temper = 0.07)
 
 # Check to see whether there are SMC convergence warnings
 # If there are warnings, increase `nsims`
@@ -320,37 +317,45 @@ pref %>%
   as.data.frame() %>%
   select("code",
         "gun_code",
-        "pop",
         "mun_name",
-        "sub_name") %>%
+        "sub_name",
+        pop = all_of(pop_col)) %>%
   write_excel_csv(here(paste("temp/",
                             as.character(pref_code),
                             "_",
                             as.character(pref_name),
-                            "_lh_year.csv",
+                            "_lh_2022.csv",
                             sep = "")))
 
 # Read back the CSV to environment
-dist_lh_year <- read_csv(here(paste("data-raw/lh_year/",
+dist_lh_2022 <- read_csv(here(paste("data-raw/lh_2022/",
                                     as.character(pref_code),
                                     "_",
                                     as.character(pref_name),
-                                    "_lh_year.csv",
+                                    "_lh_2022.csv",
                                     sep = "")))
 
-# Add reference plan
-pref_map$lh_year <- dist_lh_year$lh_year
-sim_smc_pref_ref <- add_reference(plans = sim_smc_pref_pullback,
-                                  ref_plan = as.numeric(dist_lh_year$lh_year),
-                                  name = "lh_year")
-
-# Add `total_pop`
-for(i in 1:ndists_new){
-  sim_smc_pref_ref$total_pop[which(sim_smc_pref_ref$draw == "lh_year" &
-                                    sim_smc_pref_ref$district == i)] <-
-    # Population in District i
-    sum(dist_lh_year[[pop_col]][which(dist_lh_year$lh_year == i)])
+# Add reference plan ONLY IF the number of districts is the same
+if (ndists_new == ndists_old) {
+  
+  pref_map$lh_2022 <- dist_lh_2022$lh_2022
+  sim_smc_pref_ref <- add_reference(plans = sim_smc_pref_pullback,
+                                    ref_plan = as.numeric(dist_lh_2022$lh_2022),
+                                    name = "lh_2022")
+  
+  # Add `total_pop` for the reference plan
+  for(i in 1:ndists_new){
+    sim_smc_pref_ref$total_pop[which(sim_smc_pref_ref$draw == "lh_2022" &
+                                      sim_smc_pref_ref$district == i)] <-
+      # Population in District i
+      sum(dist_lh_2022[[pop_col]][which(dist_lh_2022$lh_2022 == i)])
+  }
+  
+} else {
+  # If the number of districts is different, just use the simulated plans
+  sim_smc_pref_ref <- sim_smc_pref_pullback
 }
+
 
 # Add precinct population
 attr(sim_smc_pref_ref, "prec_pop") <- pref_map[[pop_col]]
@@ -360,6 +365,8 @@ saveRDS(pref, here(paste("data-out/shapefile/",
                         as.character(pref_code),
                         "_",
                         as.character(pref_name),
+                        "_",
+                        as.character(year),
                         ".Rds",
                         sep = "")))
 
@@ -367,6 +374,8 @@ saveRDS(prefadj, here(paste("data-out/adj/",
                             as.character(pref_code),
                             "_",
                             as.character(pref_name),
+                            "_",
+                            as.character(year),
                             "_adj.Rds",
                             sep = "")))
 
@@ -375,8 +384,9 @@ write_rds(pref_map, here(paste("data-out/map/",
                               as.character(pref_code),
                               "_",
                               as.character(pref_name),
+                              "_",
                               as.character(year),
-                              "_lh_year_map.rds",
+                              "_lh_2022_map.rds",
                               sep = "")),
           compress = "xz")
 
@@ -388,6 +398,7 @@ saveRDS(sim_smc_pref_ref, here(paste("data-out/smc-out/",
                                     as.character(sim_type),
                                     "_",
                                     as.character(year),
+                                    "_",
                                     as.character(nsims * 4),
                                     ".Rds",
                                     sep = "")))

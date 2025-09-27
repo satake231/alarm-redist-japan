@@ -110,3 +110,4 @@ pref_mun <- sf::st_as_sf(pref_mun)
 
 # Confirm that the population figure matches that of the redistricting committee
 sum(pref_mun$pop)
+

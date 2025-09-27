@@ -8,14 +8,18 @@ pref_map <- readRDS(here(paste("data-out/map/",
                               as.character(pref_code),
                               "_",
                               as.character(pref_name),
-                              "_lh_year_map.rds",
+                              "_",
+                              as.character(year),
+                              "_lh_2022_map.rds",
                               sep = "")))
 
 sim_smc_pref_sample <- readRDS(here(paste("data-out/plans/",
                                           as.character(pref_code),
                                           "_",
                                           as.character(pref_name),
-                                          "_lh_year_plans.rds",
+                                          "_",
+                                          as.character(year),
+                                          "_lh_2022_plans.rds",
                                           sep = "")))
 
 # Population Deviation

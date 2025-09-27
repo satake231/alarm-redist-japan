@@ -4,7 +4,7 @@
 ###############################################################################
 
 # Find Optimal Plan
-# Note that `results_sample` includes the data for `lh_year`
+# Note that `results_sample` includes the data for `lh_2022`
 optimal <- as.numeric(results_sample$draw[which(results_sample$max_to_min ==
                                                   min(results_sample$max_to_min))][1])-1
 results_sample[which(results_sample$draw == optimal),]
@@ -40,8 +40,8 @@ boundary$type <- factor(boundary$type, levels = boundary$type)
 # Co-occurrence
 # Filter out plans with top 10% max_min ratio
 good_num <- results_sample %>%
-  # Filter out `lh_year`
-  filter(draw != "lh_year") %>%
+  # Filter out `lh_2022`
+  filter(draw != "lh_2022") %>%
   arrange(max_to_min) %>%
   slice(1: as.numeric(length(results_sample$draw)*0.1)) %>%
   select(draw)
@@ -136,10 +136,10 @@ ggplot() +
 # Set Colors for Plot
 if(ndists_new > 6){
   color_pref_map <- pref_map %>%
-    mutate(color = redist:::color_graph(.$adj, as.integer(.$lh_year)))
+    mutate(color = redist:::color_graph(.$adj, as.integer(.$lh_2022)))
 }else{
   color_pref_map <- pref_map %>%
-    mutate(color = lh_year)
+    mutate(color = lh_2022)
 }
 # Plot Map
 ggplot() +
@@ -237,7 +237,7 @@ rm(cl_co,
   matrix_optimal,
   functioning_results,
   results,
-  dist_lh_year,
+  dist_lh_2022,
   pref_2019_HoC_PR,
   pref_2019_HoC_PR_cleaned,
   pref_2022_HoC_PR,
@@ -259,6 +259,8 @@ save.image(here(paste("data-out/environment/",
                       "_",
                       as.character(pref_name),
                       "_data",
+                      "_",
+                      as.character(year),
                       ".Rdata",
                       sep = "")),
           compress = "xz")

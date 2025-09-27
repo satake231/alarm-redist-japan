@@ -1,5 +1,5 @@
 ###############################################################################
-# Post-processing for `12_chiba`
+# Post-processing for `01_hokkaido`
 # © ALARM Project, April 2023
 ###############################################################################
 
@@ -72,13 +72,17 @@ pref_map <- readRDS(here(paste("data-out/map/",
                               as.character(pref_code),
                               "_",
                               as.character(pref_name),
-                              "_lh_year_map.rds",
+                              "_",
+                              as.character(year),
+                              "_lh_2022_map.rds",
                               sep = "")))
 
 prefadj <- readRDS(here(paste("data-out/adj/",
                               as.character(pref_code),
                               "_",
                               as.character(pref_name),
+                              "_",
+                              as.character(year),
                               "_adj.Rds",
                               sep = "")))
 
@@ -283,17 +287,17 @@ functioning_results <- results %>%
 # Sample 5,000 plans
 set.seed(2020)
 valid_sample <- functioning_results %>%
-  filter(draw != "lh_year") %>%
+  filter(draw != "lh_2022") %>%
   pull(draw) %>%
   sample(5000, replace = FALSE)
 
 # 5,000 sampled plans & reference plan
 results_sample <- results %>%
-  dplyr::filter(draw %in% valid_sample | draw == "lh_year")
+  dplyr::filter(draw %in% valid_sample | draw == "lh_2022")
 
 # Add summary statistics to the sampled `redist_plan`
 sim_smc_pref_sample <- sim_smc_pref_ref %>%
-  dplyr::filter(draw %in% valid_sample | draw == "lh_year") %>%
+  dplyr::filter(draw %in% valid_sample | draw == "lh_2022") %>%
   partisan_metrics_japan(pref_map) %>%
   dplyr::left_join(results_sample, by = "draw")
 
@@ -322,7 +326,9 @@ write_rds(sim_smc_pref_sample,
                     as.character(pref_code),
                     "_",
                     as.character(pref_name),
-                    "_lh_year_plans.rds",
+                    "_",
+                    as.character(year),
+                    "_lh_2022_plans.rds",
                     sep = "")),
           compress = "xz")
 
@@ -333,5 +339,7 @@ as_tibble(sim_smc_pref_sample) %>%
                       as.character(pref_code),
                       "_",
                       as.character(pref_name),
-                      "_lh_year_stats.csv",
+                      "_",
+                      as.character(year),
+                      "_lh_2022_stats.csv",
                       sep = "")))

@@ -137,6 +137,14 @@ if ("nv_hoshu" %in% names(pref_map)) {
   print(summary(hoshu_share$hoshu_vote_share))
 }
 
+sim_smc_pref_sample_with_shares <- sim_smc_pref_sample %>%
+  mutate(
+    cdp_share = redist::group_frac(pref_map, nv_cdp, nv_total),
+    ishin_share = redist::group_frac(pref_map, nv_ishin, nv_total),
+    jcp_share = redist::group_frac(pref_map, nv_jcp, nv_total)
+  )
+
+
 # Summary statistics comparison
 cat("\n=== Party Vote Share Summary (HoR 2024) ===\n")
 party_summary <- sim_smc_pref_sample %>%

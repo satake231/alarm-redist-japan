@@ -1,26 +1,26 @@
 # clean_pref_2021_HoR_PR.R
 
 # 必要なパッケージ
-library(readr)
 library(dplyr)
 library(tidyr)
 
 #' 衆議院比例区の都道府県別データを整形する
 #'
-#' @param file_path 生のデータファイルへのパス（.xlsから変換したCSVを想定）
+#' @param pref_2021_HoR_PR download_2021_HoR()で読み込んだ生のデータフレーム
 #'
 #' @return 整形済みのtibble（municipality, party, votes）
 #'
-clean_pref_2021_HoR_PR <- function(file_path) {
+clean_pref_2021_HoR_PR <- function(pref_2021_HoR_PR) {
   
-  # 1. ヘッダーを3行スキップして読み込み
-  df_raw <- read_csv(
-    file_path,
-    skip = 3,
-    # readrが自動で列名を推測するため、列名が長すぎる場合の警告を抑制
-    show_col_types = FALSE 
-  )
-  
+  # 1. ヘッダーが5行目から始まるため、5行目以降を対象とする
+  df_raw <- pref_2021_HoR_PR %>%
+    slice(5:n()) 
+
+  # ヘッダー行を抽出し、列名を設定
+  new_headers <- as.character(df_raw[1, ])
+  df_raw <- df_raw[-1, ]
+  colnames(df_raw) <- new_headers
+
   # 2. 列名の変更と不要な「得票数計」列の削除
   df_renamed <- df_raw %>%
     rename(municipality = 1) %>% # 最初の列を"municipality"に
@@ -33,7 +33,8 @@ clean_pref_2021_HoR_PR <- function(file_path) {
       names_to = "party",        # 新しい政党列の名前
       values_to = "votes"        # 新しい得票数列の名前
     ) %>%
-    filter(!is.na(votes)) # NAの行（合計行の残骸など）を除去
-  
+    filter(!is.na(votes)) %>% # NAの行（合計行の残骸など）を除去
+    mutate(votes = as.numeric(votes)) # 念のため数値型に変換
+
   return(df_tidy)
 }

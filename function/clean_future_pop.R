@@ -10,28 +10,20 @@ library(readxl)
 #' @return 整形済みのtibble（code, mun_name, pop）
 #'
 #' @export
-clean_future_pop <- function(future_pop_raw, year = 2050) {
 
-  # 対象年の列名を生成 (例: "2050年")
-  year_col_name <- paste0(year, "年")
-
-  # データ整形
-  future_pop_cleaned <- future_pop_raw %>%
-    # 正しく読み込まれた列名でフィルタリング
-    dplyr::filter(`市などの別` %in% c("0", "2", "3")) %>%
-    # 必要な列を選択し、名前を変更
+clean_future_pop <- function(future_pop_raw) {
+  # rename data frame
+  future_pop_cleaned <- future_pop_raw |>
     dplyr::select(
-      code = `コード`,
-      mun_name = `市区町村`,
-      pop = all_of(year_col_name) # 対象年を動的に選択
-    ) %>%
-    # データ型を変換
-    dplyr::mutate(
-      code = as.numeric(code),
-      pop = as.numeric(pop)
-    ) %>%
-    # 市区町村名が欠損している行を除外
-    na.omit()
+      code = "...1",
+      pop_2020 = "2020年...5",
+      pop_2025 = "2025年...6",
+      pop_2030 = "2030年...7",
+      pop_2035 = "2035年...8",
+      pop_2040 = "2040年...9",
+      pop_2045 = "2045年...10",
+      pop_2050 = "2050年...11",
+    )
 
   return(future_pop_cleaned)
 }

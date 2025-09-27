@@ -1,5 +1,5 @@
 ###############################################################################
-# Download and prepare data for `01_hokkaido` analysis (Future Projection)
+# Download and prepare data for `01_hokkaido` analysis
 # © ALARM Project, May 2023
 ###############################################################################
 
@@ -17,87 +17,133 @@ sapply(files.sources, source)
 rm(files.sources)
 setwd(here())
 
-# (シミュレーションパラメータの定義は変更なし)
-# ... (sim_type, nsims, pref_code, etc.)
+# TODO: Define parameters for simulation
+# In Hokkaido, the redistricting committee uses the 振興局 grouping as an administrative boundary.
+# Thus, We treat this 振興局 as `gun` (county) in the program,
+# because there is no 郡 (gun) in Hokkaido.
+sim_type <- "smc"
+nsims <- 20000 # Set so that the number of valid plans > 5,000
+pref_code <- 01
+pref_name <- "hokkaido"
+lakes_removed <- c()
+ndists_new <- 12
+ndists_old <- 12
+pop_tol <- 0.33
+lh_old_max_to_min <- 1.871
+lh_old_mun_split <- 2
+lh_old_gun_split <- 0
+lh_old_koiki_split <- 2
+lh_2022_max_to_min <- 1.858
+lh_2022_mun_split <- 3
+lh_2022_gun_split <- 1
+lh_2022_koiki_split <- 2
 
-# --- データダウンロード ---
+# Split the municipalities that are split under the status quo
+split_code <- c(01102,
+                01107)
+# 札幌市北区、札幌市西区
 
-# Clean Census shapefile (変更なし)
+# Municipalities that are split under the newly enacted plan
+split_code_lh_2022 <- c(01102,
+                        01107,
+                        01104)
+# 札幌市北区、札幌市西区、札幌市白石区
+
+# Code of 郡 that are split under the status quo
+gun_exception <- c("ishikari") # 石狩振興局
+
+# Change time limit
+options(timeout = 300)
+
+# Download Census shapefile
 pref_shp_2020 <- download_shp(pref_code)
+
+# Clean Census shapefile
 pref_shp_cleaned <- pref_shp_2020 %>%
   clean_jcdf()
+# Note that S_NAME shows the name of the first entry of the areas grouped
+# in the same KIHON-1 unit (i.e. disregard --丁目,字--)
 
-# Download and clean 2020 Census data (for population ratio)
+# Download 2020 Census data at 小地域-level (size of Japanese population)
 pref_pop_2020 <- download_pop_2020(pref_code)
-pref_pop_cleaned_2020 <- clean_pref_pop_2020(pref_pop_2020, sub_code = TRUE) %>%
-  rename(code = mun_code)
 
-# Download and clean Future Population data
-future_pop_raw <- download_future_pop()
-#
-# ★★★ ここからが将来人口データへの差し替え処理 ★★★
-#
-# 1. 2050年の市区町村別将来人口データを整形
-future_pop_cleaned <- clean_future_pop(future_pop_raw, year = 2050)
+# Download predicted population data at municipal-level
+future_pop <- download_future_pop()
 
-# 2. 2020年国勢調査データから、市区町村内の小地域別人口比率を計算
-pref_pop_ratio <- pref_pop_cleaned_2020 %>%
-  group_by(code) %>%
-  mutate(pop_ratio = pop / sum(pop, na.rm = TRUE)) %>%
-  # 人口が0の場合のNaNを0に置換
-  mutate(pop_ratio = if_else(is.nan(pop_ratio), 0, pop_ratio)) %>%
-  select(code, sub_code, pop_ratio)
-
-# 3. 地図データ(pref_shp_cleaned)に、小地域ごとの人口比率を結合し、
-#    さらに市区町村ごとの将来人口を結合して、小地域ごとの将来人口を推計
-pref_join_future <- pref_shp_cleaned %>%
-  dplyr::mutate(sub_code = as.numeric(KIHON1)) %>%
-  dplyr::left_join(pref_pop_ratio, by = c("code", "sub_code")) %>%
-  dplyr::left_join(future_pop_cleaned, by = c("code", "mun_name")) %>%
-  # 将来人口(pop.y)を2020年の人口比率(pop_ratio)で按分
-  dplyr::mutate(pop = round(pop.y * pop_ratio)) %>%
-  # 必要な列を選択し、列名を整理
-  dplyr::select(code, mun_name, sub_code, sub_name, pop, geometry)
-
-# ★★★ ここまでが将来人口データへの差し替え処理 ★★★
-
-# Download election data (変更なし)
+# Download 2019 House of Councillors election data (Proportional Representation)
 pref_2019_HoC_PR <- download_2019_HoC_PR(pref_code)
+
+# Download 2022 House of Councillors election data (Proportional Representation)
 pref_2022_HoC_PR <- download_2022_HoC_PR(pref_code)
 
-# Clean election data and estimate baseline votes (変更なし)
+####2. Urban Prefectures########
+
+# Clean 2020 Census data at the 小地域-level
+pref_pop_cleaned <- clean_pref_pop_2020(pref_pop_2020, sub_code = TRUE) %>%
+  rename(code = mun_code)
+
+# Clean predicted population data at munincipal-level
+future_pop_cleaned <- clean_future_pop(future_pop)
+
+# Clean 2019 House of Councillors election data
 pref_2019_HoC_PR_cleaned <- clean_pref_2019_HoC_PR(pref_2019_HoC_PR)
+
+# Clean 2022 House of Councillors election data
 pref_2022_HoC_PR_cleaned <- clean_pref_2022_HoC_PR(pref_2022_HoC_PR)
+
+# Estimate baseline votes
 pref_HoC_PR <- clean_pref_HoC_PR(pref_2019_HoC_PR_cleaned, pref_2022_HoC_PR_cleaned)
 
-# --- データマージ ---
-# 按分した将来人口データ(pref_join_future)を使い、 partisan data を結合する
-# `pref_join` の代わりに `pref_join_future` を使用
+# Match `pref_shp_cleaned` with `pref_pop_cleaned`
+pref_join <- pref_shp_cleaned %>%
+  dplyr::mutate(sub_code = as.numeric(KIHON1)) %>%
+  dplyr::left_join(pref_pop_cleaned, by = c("code", "sub_code")) %>%
+  dplyr::select(code, mun_name, sub_code, sub_name, pop, geometry)
+
+# Freeze municipalities except for `split_code` and `split_code_lh_2022`
+# Calculate the baseline votes per municipality
 pref_mun <- dplyr::bind_rows(
   # Municipalities without splits
-  pref_join_future %>% # ★変更
+  pref_join %>%
     dplyr::filter(code %in% c(split_code, split_code_lh_2022) == FALSE) %>%
     dplyr::group_by(code, mun_name) %>%
     dplyr::summarise(sub_code = first(sub_code),
                     sub_name = "-",
-                    pop = sum(pop, na.rm = TRUE), # ★変更
+                    pop = sum(pop),
                     geometry = sf::st_union(geometry)) %>%
     dplyr::left_join(pref_HoC_PR, by = "mun_name"),
   # Municipalities with splits
-  pref_join_future %>% # ★変更
+  pref_join %>%
     dplyr::filter(code %in% c(split_code, split_code_lh_2022)) %>%
-    dplyr::group_by(code, mun_name) %>% # ★mun_nameでグループ化
-    dplyr::mutate(pop_ratio_partisan = pop / sum(pop, na.rm = TRUE)) %>%
-    # 人口が0の場合のNaNを0に置換
-    mutate(pop_ratio_partisan = if_else(is.nan(pop_ratio_partisan), 0, pop_ratio_partisan)) %>%
+    dplyr::group_by(code) %>%
+    dplyr::mutate(pop_ratio = pop / sum(pop)) %>%
     dplyr::left_join(pref_HoC_PR, by = "mun_name") %>%
-    dplyr::mutate(dplyr::across(tidyselect::starts_with("nv"), ~ .x * pop_ratio_partisan)) %>%
-    dplyr::select(-pop_ratio_partisan)
+    dplyr::mutate(dplyr::across(tidyselect::starts_with("nv"), ~ .x * pop_ratio)) %>%
+    dplyr::select(-pop_ratio)
 )
 
-# Confirm that the population figure matches the total of the future projection
-# 念のため、合計人口が将来推計人口の合計と一致するか確認
-sum(pref_mun$pop, na.rm = TRUE)
-sum(future_pop_cleaned[future_pop_cleaned$code >= pref_code*1000 & future_pop_cleaned$code < (pref_code+1)*1000, ]$pop, na.rm = TRUE)
-sum(pref_mun$nv_ldp, na.rm = TRUE)
-sum(pref_HoC_PR$nv_ldp, na.rm = TRUE)
+detail_data <- pref_mun %>%
+  filter(sub_name != "-") %>%
+  group_by(code) %>%
+  mutate(pop_ratio = pop / sum(pop)) %>%
+  ungroup() %>%
+  left_join(future_pop_cleaned, by = "code") %>%
+  # across() を使って、'pop_'で始まる全ての列に pop_ratio を掛ける
+  mutate(across(starts_with("pop_"), ~ .x * pop_ratio, .names = "adjusted_{.col}")) %>%
+  # 元になった将来人口の列と、計算に使った比率の列は削除
+  select(-starts_with("pop_"), -pop_ratio)
+
+agg_data <- pref_mun %>%
+  filter(sub_name == "-") %>%
+  left_join(future_pop_cleaned, by = "code") %>%
+  # 他のデータと列名を合わせる
+  rename_with(~ paste0("adjusted_", .), starts_with("pop_"))
+
+pref_mun <- bind_rows(agg_data, detail_data) %>%
+  arrange(code, sub_code) %>%
+  rename_with(~ gsub("adjusted_", "", .x), starts_with("adjusted_"))
+
+
+# Confirm that the population figure matches that of the redistricting committee
+sum(pref_mun$pop)
+sum(pref_mun$nv_ldp)

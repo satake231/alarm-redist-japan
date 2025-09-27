@@ -22,7 +22,7 @@ download_future_pop <- function(){
                 "data-raw/future_pop.xlsx", mode = "wb")
 
   # return the data frame
-  future_pop_raw <- readxl::read_excel("data-raw/future_pop.xlsx", skip = 3)
+  future_pop_raw <- readxl::read_excel("data-raw/future_pop.xlsx", skip = 4)
 
   return(future_pop_raw)
 }

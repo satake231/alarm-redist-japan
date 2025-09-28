@@ -253,8 +253,7 @@ cooccurrence_plot <- ggplot() +
   
   theme_map() +
   theme(legend.position = "right", legend.title = element_blank()) +
-  ggtitle(paste0("Co-occurrence Analysis - Saitama ", year, " Projection (", ndists_new, " districts)")) +
-  labs(caption = "Boundaries aggregated to municipality level")
+  ggtitle(paste0("Co-occurrence Analysis - Saitama ", year, " Projection (", ndists_new, " districts)"))
 
 print(cooccurrence_plot)
 
@@ -300,9 +299,7 @@ optimal_plot <- ggplot() +
           subtitle = paste0("1票の格差: ", optimal_max_to_min, 
                           " | Districts: ", ndists_old, "→", ndists_new, 
                           " | Total Pop: ", format(total_population, big.mark = ","), 
-                          " | Draw: ", optimal)) +
-  labs(caption = "Boundaries aggregated to municipality level to eliminate internal census tract divisions")
-
+                          " | Draw: ", optimal))
 print(optimal_plot)
 
 # Print summary for easy reference

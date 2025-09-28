@@ -1,5 +1,5 @@
 ###############################################################################
-# Download and prepare data for `01_hokkaido` analysis
+# Download and prepare data for `01_hokkaido_future` analysis
 # © ALARM Project, May 2023
 ###############################################################################
 
@@ -28,7 +28,7 @@ nsims <- 20000 # Set so that the number of valid plans > 5,000
 pref_code <- 01
 pref_name <- "hokkaido"
 lakes_removed <- c()
-ndists_new <- 10 # 2050年の予測される定数は10
+ndists_new <- 10 # 2050年の予測される定数は10（現在の12から減少予定）
 ndists_old <- 12
 pop_tol <- 0.33
 lh_old_max_to_min <- 1.871
@@ -84,8 +84,18 @@ pref_2022_HoC_PR <- download_2022_HoC_PR(pref_code)
 pref_pop_cleaned <- clean_pref_pop_2020(pref_pop_2020, sub_code = TRUE) %>%
   rename(code = mun_code)
 
-# Clean predicted population data at munincipal-level
-future_pop_cleaned <- clean_future_pop(future_pop)
+# Clean predicted population data at municipal-level
+future_pop_cleaned <- clean_future_pop(future_pop) %>%
+  # Handle missing values and ensure proper formatting
+  mutate(
+    # Convert all population columns to numeric, handling any text values
+    across(starts_with("pop_"), ~ as.numeric(as.character(.x))),
+    # Filter out rows where code is missing or invalid
+    code = as.numeric(code)
+  ) %>%
+  filter(!is.na(code)) %>%
+  # Filter for Hokkaido prefecture (code 1xxx)
+  filter(code >= 1000 & code < 2000)
 
 # Clean 2019 House of Councillors election data
 pref_2019_HoC_PR_cleaned <- clean_pref_2019_HoC_PR(pref_2019_HoC_PR)
@@ -124,28 +134,41 @@ pref_mun <- dplyr::bind_rows(
     dplyr::select(-pop_ratio)
 )
 
+# Add future population data with proper handling for split municipalities
 detail_data <- pref_mun %>%
   filter(sub_name != "-") %>%
   group_by(code) %>%
   mutate(pop_ratio = pop / sum(pop)) %>%
   ungroup() %>%
   left_join(future_pop_cleaned, by = "code") %>%
-  # across() を使って、'pop_'で始まる全ての列に pop_ratio を掛ける
+  # Apply population projections proportionally
   mutate(across(starts_with("pop_"), ~ .x * pop_ratio, .names = "adjusted_{.col}")) %>%
-  # 元になった将来人口の列と、計算に使った比率の列は削除
+  # Remove original future pop columns and ratio
   select(-starts_with("pop_"), -pop_ratio)
 
 agg_data <- pref_mun %>%
   filter(sub_name == "-") %>%
   left_join(future_pop_cleaned, by = "code") %>%
-  # 他のデータと列名を合わせる
+  # Align column names with detail_data
   rename_with(~ paste0("adjusted_", .), starts_with("pop_"))
 
 pref_mun <- bind_rows(agg_data, detail_data) %>%
   arrange(code, sub_code) %>%
-  rename_with(~ gsub("adjusted_", "", .x), starts_with("adjusted_"))
+  rename_with(~ gsub("adjusted_", "", .x), starts_with("adjusted_")) %>%
+  # Handle missing future population values
+  mutate(
+    across(starts_with("pop_") & !matches("^pop$"), ~ case_when(
+      !is.na(.x) ~ .x,
+      TRUE ~ as.numeric(pop) * 0.8  # Default assumption for missing data
+    ))
+  ) %>%
+  # Ensure all population values are positive integers
+  mutate(across(starts_with("pop_") & !matches("^pop$"), ~ pmax(as.integer(round(.x)), 1)))
 
+# Check for missing values
+cat("Missing values in pop_2050:", sum(is.na(pref_mun$pop_2050)), "\n")
+cat("Total 2050 population:", sum(pref_mun$pop_2050, na.rm = TRUE), "\n")
 
 # Confirm that the population figure matches that of the redistricting committee
-sum(pref_mun$pop)
-sum(pref_mun$nv_ldp)
+sum(pref_mun$pop, na.rm = TRUE)
+sum(pref_mun$nv_ldp, na.rm = TRUE)

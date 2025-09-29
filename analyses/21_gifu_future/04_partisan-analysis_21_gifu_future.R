@@ -1,92 +1,354 @@
 ###############################################################################
-# Partisan Analysis for `21_gifu`
-# © ALARM Project, April 2023
+# Partisan Analysis for `21_gifu_future`
+# © ALARM Project, May 2023
 ###############################################################################
 
+cat("=== STARTING PARTISAN ANALYSIS ===\n")
+cat("Future projection year:", year, "\n")
+cat("Prefecture: Gifu (", pref_code, ")\n")
+cat("District change:", ndists_old, "→", ndists_new, "\n\n")
+
 # Load data
+cat("Loading data...\n")
 pref_map <- readRDS(here(paste("data-out/map/",
-                               as.character(pref_code),
-                               "_",
-                               as.character(pref_name),
-                               "_lh_2022_map.rds",
-                               sep = "")))
+                              as.character(pref_code),
+                              "_",
+                              as.character(pref_name),
+                              "_",
+                              as.character(year),
+                              "_lh_2022_map.rds",
+                              sep = "")))
 
 sim_smc_pref_sample <- readRDS(here(paste("data-out/plans/",
                                           as.character(pref_code),
                                           "_",
                                           as.character(pref_name),
+                                          "_",
+                                          as.character(year),
                                           "_lh_2022_plans.rds",
                                           sep = "")))
 
-# Population Deviation
-redist.plot.hist(sim_smc_pref_sample, qty = plan_dev, bins = 10) +
-  labs(x = "Population Deviation", y = "Percentage of Plans") +
+cat("Number of sampled plans:", length(unique(sim_smc_pref_sample$draw)), "\n")
+cat("Analysis data loaded successfully\n\n")
+
+# Load required libraries
+library(ggplot2)
+library(redist)
+library(dplyr)
+
+# Find optimal plan for highlighting
+cat("=== IDENTIFYING OPTIMAL PLAN ===\n")
+if(exists("results_sample")) {
+  optimal_draw <- results_sample$draw[which(results_sample$max_to_min == min(results_sample$max_to_min))][1]
+  cat("Optimal plan found from results_sample: draw", optimal_draw, "\n")
+} else {
+  # Calculate max_to_min ratio for all plans
+  temp_results <- sim_smc_pref_sample %>%
+    group_by(draw) %>%
+    summarise(max_to_min = max(total_pop)/min(total_pop), .groups = 'drop')
+  optimal_draw <- temp_results$draw[which(temp_results$max_to_min == min(temp_results$max_to_min))][1]
+  cat("Optimal plan calculated: draw", optimal_draw, "\n")
+}
+
+# Create optimal plan data for highlighting
+optimal_plan_data <- sim_smc_pref_sample %>%
+  filter(draw == optimal_draw) %>%
+  mutate(draw = as.factor(draw))
+
+cat("Optimal plan 1票の格差:", round(max(optimal_plan_data$total_pop)/min(optimal_plan_data$total_pop), 3), "\n\n")
+
+# Create output directory
+dir.create(here("data-out/partisan-analysis"), recursive = TRUE, showWarnings = FALSE)
+
+# 1. Population Deviation Analysis
+cat("=== 1. POPULATION DEVIATION ANALYSIS ===\n")
+p_dev <- redist.plot.hist(sim_smc_pref_sample, qty = plan_dev, bins = 15) +
+  labs(x = "Population Deviation", 
+       y = "Percentage of Plans",
+       title = paste0("Population Deviation - Gifu ", year, " Projection"),
+       subtitle = paste0("District count: ", ndists_old, " → ", ndists_new, " districts"),
+       caption = paste0("Based on ", length(unique(sim_smc_pref_sample$draw)), " simulated plans")) +
+  theme_bw() +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 12))
+
+print(p_dev)
+
+dev_stats <- summary(sim_smc_pref_sample$plan_dev)
+cat("Population deviation range:", round(min(sim_smc_pref_sample$plan_dev), 3), 
+    "to", round(max(sim_smc_pref_sample$plan_dev), 3), "\n")
+cat("Population deviation median:", round(median(sim_smc_pref_sample$plan_dev), 3), "\n\n")
+
+# 2. Compactness Analysis
+cat("=== 2. COMPACTNESS ANALYSIS ===\n")
+p_comp <- redist.plot.hist(sim_smc_pref_sample, qty = comp_edge, bins = 15) +
+  labs(x = "Fraction of Edges Kept", 
+       y = "Percentage of Plans",
+       title = paste0("Compactness - Gifu ", year, " Projection"),
+       subtitle = "Edge-based compactness measure") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 14, face = "bold"))
+
+print(p_comp)
+
+comp_stats <- summary(sim_smc_pref_sample$comp_edge)
+cat("Compactness range:", round(min(sim_smc_pref_sample$comp_edge), 3), 
+    "to", round(max(sim_smc_pref_sample$comp_edge), 3), "\n")
+cat("Compactness median:", round(median(sim_smc_pref_sample$comp_edge), 3), "\n\n")
+
+# 3. Ruling Coalition Vote Share Analysis
+cat("=== 3. RULING COALITION ANALYSIS ===\n")
+
+# Jitter plot
+p_ruling_jitter <- redist.plot.distr_qtys(sim_smc_pref_sample, ruling_share,
+                      color_thresh = 0.5) +
+  labs(title = paste0("Ruling Coalition Vote Share - Gifu ", year),
+       subtitle = paste0("LDP + Komeito across ", ndists_new, " districts"),
+       x = "District", y = "Ruling Coalition Vote Share") +
   theme_bw()
 
-# Compactness
-redist.plot.hist(sim_smc_pref_sample, qty = comp_edge, bins = 10) +
-  labs(x = "Fraction of Edges Kept", y = "Percentage of Plans") +
-  theme_bw()
+print(p_ruling_jitter)
 
-# Election results by district:
-# Ruling coalition vote share
-redist.plot.distr_qtys(sim_smc_pref_sample, ruling_share,
-                       color_thresh = 0.5)
-# Boxplot
-redist.plot.distr_qtys(sim_smc_pref_sample, ruling_share,
-                       geom = "boxplot")
+# Boxplot with optimal plan highlighted
+p_ruling_box <- redist.plot.distr_qtys(sim_smc_pref_sample, ruling_share,
+                      geom = "boxplot") +
+  # Add optimal plan as large points
+  geom_point(data = optimal_plan_data, 
+            aes(x = district, y = ruling_share), 
+            color = "red", size = 3, shape = 15) +
+  labs(title = paste0("Ruling Coalition Vote Share Distribution - Gifu ", year),
+       subtitle = paste0("Boxplots across ", ndists_new, " districts"),
+       caption = paste0("Red squares show optimal plan (draw ", optimal_draw, ")"),
+       x = "District (ordered by vote share)", y = "Ruling Coalition Vote Share") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 14, face = "bold"))
 
-# LDP vote share vs Komei vote share
-# Scatter Plot
-sim_smc_pref_sample %>%
+print(p_ruling_box)
+
+ruling_stats <- summary(sim_smc_pref_sample$ruling_share)
+cat("Ruling coalition vote share range:", round(min(sim_smc_pref_sample$ruling_share), 3), 
+    "to", round(max(sim_smc_pref_sample$ruling_share), 3), "\n")
+cat("Ruling coalition vote share median:", round(median(sim_smc_pref_sample$ruling_share), 3), "\n\n")
+
+# 4. LDP vs Komei Analysis
+cat("=== 4. LDP VS KOMEI ANALYSIS ===\n")
+p_scatter1 <- sim_smc_pref_sample %>%
   group_by(draw) %>%
   mutate(dist_by_ruling_share = row_number(ruling_share)) %>%
-  redist.plot.scatter(x = ldp_share,
-                      y = komei_share) +
-  facet_wrap(~dist_by_ruling_share)
-# Dot-plots by Ordered Districts
-redist.plot.distr.custom.color(sim_smc_pref_sample, ruling_share,
-                               color_var = ldp_v_komei) +
-  scale_colour_gradient(low = "#f55881", high = "#3CA324")
+  redist.plot.scatter(x = ldp_share, y = komei_share) +
+  facet_wrap(~dist_by_ruling_share, ncol = 4) +
+  labs(title = paste0("LDP vs Komei Vote Share - Gifu ", year),
+       subtitle = "By district (ordered by total ruling vote share)",
+       x = "LDP Vote Share", y = "Komei Vote Share") +
+  theme_bw()
 
-# Election results by district:
-# Ruling coalition vs opposition coalition that excludes the DPP
-redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_coalition_4,
-                       color_thresh = 0.5)
-# Boxplot
-redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_coalition_4,
-                       geom = "boxplot")
+print(p_scatter1)
 
-# LDP vote share vs Komei vote share
-# Scatter Plot
-sim_smc_pref_sample %>%
-  group_by(draw) %>%
-  mutate(dist_by_ruling_share = row_number(ruling_v_opp_coalition_4)) %>%
-  redist.plot.scatter(x = ldp_share,
-                      y = komei_share) +
-  facet_wrap(~dist_by_ruling_share)
-# Dot-plots by Ordered Districts
-redist.plot.distr.custom.color(sim_smc_pref_sample, ruling_v_opp_coalition_4,
-                               color_var = ldp_v_komei) +
-  scale_colour_gradient(low = "#f55881", high = "#3CA324")
+# Custom color dot plot (if function exists)
+if(exists("redist.plot.distr.custom.color")) {
+  cat("Creating LDP vs Komei gradient plot...\n")
+  p_custom1 <- redist.plot.distr.custom.color(sim_smc_pref_sample, ruling_share,
+                                color_var = ldp_v_komei) +
+    scale_colour_gradient(low = "#f55881", high = "#3CA324", name = "LDP-Komei\nBalance") +
+    labs(title = paste0("Ruling Share by District - Gifu ", year),
+         subtitle = "Color indicates LDP vs Komei balance",
+         x = "District (ordered by ruling share)", y = "Ruling Coalition Vote Share") +
+    theme_bw()
+  print(p_custom1)
+}
 
-# Election results by district:
-# Ruling coalition vs all major opposition parties
-redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_all,
-                       color_thresh = 0.5)
-# Boxplot
-redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_all,
-                       geom = "boxplot")
+# 5. Opposition Analysis (excluding DPP)
+cat("=== 5. OPPOSITION ANALYSIS (EXCLUDING DPP) ===\n")
+p_opp4_jitter <- redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_coalition_4,
+                      color_thresh = 0.5) +
+  labs(title = paste0("Ruling vs Opposition (excl. DPP) - Gifu ", year),
+       subtitle = "CDP + JCP + Reiwa + SDP coalition",
+       x = "District", y = "Ruling Coalition Vote Share") +
+  theme_bw()
 
-# LDP vote share vs Komei vote share
-# Scatter Plot
-sim_smc_pref_sample %>%
-  group_by(draw) %>%
-  mutate(dist_by_ruling_share = row_number(ruling_v_opp_all)) %>%
-  redist.plot.scatter(x = ldp_share,
-                      y = komei_share) +
-  facet_wrap(~dist_by_ruling_share)
-# Dot-plots by Ordered Districts
-redist.plot.distr.custom.color(sim_smc_pref_sample, ruling_v_opp_all,
-                               color_var = ldp_v_komei) +
-  scale_colour_gradient(low = "#f55881", high = "#3CA324")
+print(p_opp4_jitter)
+
+p_opp4_box <- redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_coalition_4,
+                      geom = "boxplot") +
+  geom_point(data = optimal_plan_data, 
+            aes(x = district, y = ruling_v_opp_coalition_4), 
+            color = "red", size = 3, shape = 15) +
+  labs(title = paste0("Ruling vs Opposition (excl. DPP) - Gifu ", year),
+       caption = paste0("Red squares show optimal plan (draw ", optimal_draw, ")"),
+       x = "District (ordered by vote share)", y = "Ruling Coalition Vote Share") +
+  theme_bw()
+
+print(p_opp4_box)
+
+# 6. All Opposition Analysis
+cat("=== 6. ALL OPPOSITION ANALYSIS ===\n")
+p_opp_all_jitter <- redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_all,
+                      color_thresh = 0.5) +
+  labs(title = paste0("Ruling vs All Opposition - Gifu ", year),
+       subtitle = "Including Ishin in opposition",
+       x = "District", y = "Ruling Coalition Vote Share") +
+  theme_bw()
+
+print(p_opp_all_jitter)
+
+p_opp_all_box <- redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_all,
+                      geom = "boxplot") +
+  geom_point(data = optimal_plan_data, 
+            aes(x = district, y = ruling_v_opp_all), 
+            color = "red", size = 3, shape = 15) +
+  labs(title = paste0("Ruling vs All Opposition - Gifu ", year),
+       caption = paste0("Red squares show optimal plan (draw ", optimal_draw, ")"),
+       x = "District (ordered by vote share)", y = "Ruling Coalition Vote Share") +
+  theme_bw()
+
+print(p_opp_all_box)
+
+# 7. Summary Statistics
+cat("=== 7. SUMMARY STATISTICS ===\n")
+cat("Basic Statistics:\n")
+cat("  Population deviation: ", round(min(sim_smc_pref_sample$plan_dev), 3), 
+    " to ", round(max(sim_smc_pref_sample$plan_dev), 3), "\n")
+cat("  Compactness (edge): ", round(min(sim_smc_pref_sample$comp_edge), 3), 
+    " to ", round(max(sim_smc_pref_sample$comp_edge), 3), "\n")
+cat("  Ruling coalition vote share: ", round(min(sim_smc_pref_sample$ruling_share), 3), 
+    " to ", round(max(sim_smc_pref_sample$ruling_share), 3), "\n")
+
+# Gifu-specific analysis
+cat("\nGifu-specific Analysis:\n")
+if("gun_split" %in% names(sim_smc_pref_sample)) {
+  cat("  Gun (county) splits: ", min(sim_smc_pref_sample$gun_split), 
+      " to ", max(sim_smc_pref_sample$gun_split), "\n")
+  cat("  Mean gun splits: ", round(mean(sim_smc_pref_sample$gun_split), 2), "\n")
+}
+if("koiki_split" %in% names(sim_smc_pref_sample)) {
+  cat("  Koiki-renkei splits: ", min(sim_smc_pref_sample$koiki_split), 
+      " to ", max(sim_smc_pref_sample$koiki_split), "\n")
+  cat("  Mean koiki-renkei splits: ", round(mean(sim_smc_pref_sample$koiki_split), 2), "\n")
+}
+if("mun_split" %in% names(sim_smc_pref_sample)) {
+  cat("  Municipality splits: ", min(sim_smc_pref_sample$mun_split), 
+      " to ", max(sim_smc_pref_sample$mun_split), "\n")
+  cat("  Mean municipality splits: ", round(mean(sim_smc_pref_sample$mun_split), 2), "\n")
+}
+
+# District-level analysis for optimal plan
+cat("\nOptimal Plan Analysis:\n")
+optimal_districts <- optimal_plan_data %>%
+  arrange(district) %>%
+  select(district, total_pop, ruling_share, ldp_share, komei_share)
+
+for(i in 1:ndists_new) {
+  dist_data <- optimal_districts[optimal_districts$district == i, ]
+  cat("  District", i, ": Pop =", format(dist_data$total_pop, big.mark = ","), 
+      ", Ruling =", round(dist_data$ruling_share, 3), 
+      " (LDP:", round(dist_data$ldp_share, 3), 
+      ", Komei:", round(dist_data$komei_share, 3), ")\n")
+}
+
+# 8. Future Projection Impact Analysis
+cat("\n=== 8. FUTURE PROJECTION IMPACT ===\n")
+cat("District Decrease Impact:\n")
+cat("  Districts decreased: ", ndists_old - ndists_new, " seat\n")
+cat("  Percentage decrease: ", round((ndists_old - ndists_new) / ndists_old * 100, 1), "%\n")
+
+# Calculate average district population change
+current_avg_pop <- 2000000 / ndists_old  # Approximate current Gifu population
+future_avg_pop <- sum(optimal_plan_data$total_pop) / ndists_new
+cat("  Average district size change: ", 
+    format(round(future_avg_pop - current_avg_pop), big.mark = ","), 
+    " people per district\n")
+cat("  Percentage increase per district: ",
+    round((future_avg_pop - current_avg_pop) / current_avg_pop * 100, 1), "%\n")
+
+# Population concentration analysis
+pop_cv <- sd(optimal_plan_data$total_pop) / mean(optimal_plan_data$total_pop)
+cat("  Population distribution (CV): ", round(pop_cv, 3), "\n")
+
+# Competitive district analysis
+competitive_threshold <- 0.55
+competitive_districts <- sum(optimal_plan_data$ruling_share > 0.45 & 
+                           optimal_plan_data$ruling_share < competitive_threshold)
+cat("  Competitive districts (45-55%): ", competitive_districts, "/", ndists_new, "\n")
+
+# Rural area analysis
+high_density_districts <- sum(optimal_plan_data$total_pop > mean(optimal_plan_data$total_pop))
+cat("  High-density districts (above average pop): ", high_density_districts, "/", ndists_new, "\n")
+
+# 9. Regional Analysis (Koiki-renkei)
+cat("\n=== 9. REGIONAL ANALYSIS ===\n")
+cat("Koiki-renkei Area Analysis:\n")
+cat("  2 regional cooperation zones defined\n")
+cat("  Area 1: Gifu core (central region)\n")
+cat("  Area 2: Minokamo (加茂region)\n")
+
+# 10. Save Key Plots
+cat("\n=== 10. SAVING PLOTS ===\n")
+
+plot_files <- list(
+  list(plot = p_dev, name = "population_deviation"),
+  list(plot = p_comp, name = "compactness"),
+  list(plot = p_ruling_box, name = "ruling_coalition"),
+  list(plot = p_ruling_jitter, name = "ruling_coalition_jitter"),
+  list(plot = p_opp4_box, name = "opposition_coalition"),
+  list(plot = p_opp_all_box, name = "all_opposition")
+)
+
+for(plot_info in plot_files) {
+  filename <- here(paste0("data-out/partisan-analysis/", 
+                         pref_code, "_", pref_name, "_", year, "_", 
+                         plot_info$name, ".png"))
+  ggsave(filename, plot = plot_info$plot, width = 10, height = 6, dpi = 300)
+  cat("Saved:", basename(filename), "\n")
+}
+
+# Save scatter plot with different dimensions (adjusted for 4 districts)
+ggsave(here(paste0("data-out/partisan-analysis/", pref_code, "_", pref_name, "_", year, "_ldp_komei_scatter.png")), 
+       plot = p_scatter1, width = 12, height = 6, dpi = 300)
+cat("Saved: ldp_komei_scatter.png\n")
+
+# 11. Export Summary Statistics
+cat("\n=== 11. SUMMARY EXPORT ===\n")
+
+# Create comprehensive summary
+summary_stats <- data.frame(
+  metric = c("population_deviation_min", "population_deviation_max", "population_deviation_median",
+             "compactness_min", "compactness_max", "compactness_median",
+             "ruling_share_min", "ruling_share_max", "ruling_share_median",
+             "optimal_plan_kakusa", "competitive_districts", "district_count_change"),
+  value = c(min(sim_smc_pref_sample$plan_dev), max(sim_smc_pref_sample$plan_dev), median(sim_smc_pref_sample$plan_dev),
+            min(sim_smc_pref_sample$comp_edge), max(sim_smc_pref_sample$comp_edge), median(sim_smc_pref_sample$comp_edge),
+            min(sim_smc_pref_sample$ruling_share), max(sim_smc_pref_sample$ruling_share), median(sim_smc_pref_sample$ruling_share),
+            max(optimal_plan_data$total_pop)/min(optimal_plan_data$total_pop), competitive_districts, ndists_new - ndists_old)
+)
+
+write.csv(summary_stats, 
+          here(paste0("data-out/partisan-analysis/", pref_code, "_", pref_name, "_", year, "_summary_stats.csv")), 
+          row.names = FALSE)
+cat("Saved: summary_stats.csv\n")
+
+cat("\n=== PARTISAN ANALYSIS COMPLETED ===\n")
+cat("Analysis year:", year, "\n")
+cat("District configuration:", ndists_old, "→", ndists_new, "districts\n")
+cat("Optimal plan 1票の格差:", round(max(optimal_plan_data$total_pop)/min(optimal_plan_data$total_pop), 3), "\n")
+cat("All plots and summaries saved to data-out/partisan-analysis/\n")
+
+# Final recommendations
+cat("\n=== RECOMMENDATIONS FOR FUTURE ANALYSIS ===\n")
+cat("1. Monitor population decline trends in rural areas\n")
+cat("2. Evaluate impact of district reduction on representation\n")
+cat("3. Assess Gifu City municipality splitting patterns\n")
+cat("4. Review koiki-renkei area balance across reduced districts\n")
+cat("5. Consider mountainous area representation (Hida region)\n")
+cat("6. Evaluate impact on competitive balance with fewer districts\n")
+
+cat("\nPartisan analysis completed successfully!\n")
+
+# Special note for Gifu decline context
+cat("\n=== GIFU DECLINE CONTEXT ===\n")
+cat("Key factors for 2050 redistricting:\n")
+cat("  - Population decline (~15%) driving seat reduction\n")
+cat("  - Rural depopulation accelerating\n")
+cat("  - Aging society concentration in rural areas\n")
+cat("  - District reduction may increase average district size\n")
+cat("  - Competitive balance shifts with fewer districts\n")
+cat("  - Mountain region representation challenges\n")

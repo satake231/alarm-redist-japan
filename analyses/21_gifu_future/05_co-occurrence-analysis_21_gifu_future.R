@@ -1,11 +1,11 @@
 ###############################################################################
-# Co-occurrence analysis for `15_niigata_future`
+# Co-occurrence analysis for `21_gifu_future`
 # © ALARM Project, May 2023
 ###############################################################################
 
-cat("=== STARTING NIIGATA FUTURE CO-OCCURRENCE ANALYSIS ===\n")
+cat("=== STARTING GIFU FUTURE CO-OCCURRENCE ANALYSIS ===\n")
 cat("Future projection year:", year, "\n")
-cat("Prefecture: Niigata (", pref_code, ")\n")
+cat("Prefecture: Gifu (", pref_code, ")\n")
 cat("District change:", ndists_old, "→", ndists_new, "\n\n")
 
 # Load required libraries
@@ -131,34 +131,20 @@ gun_boundary <- pref %>%
 # Combine municipality boundary data
 mun <- mun_boundary %>%
   summarise(geometry = sf::st_combine(geometry))
-mun$type <- "Municipality Boundaries"
+mun$type <- "市の境界線"
 
 # Combine gun boundary data
 gun <- gun_boundary %>%
   summarise(geometry = sf::st_combine(geometry))
-gun$type <- "County Boundaries"
+gun$type <- "郡の境界線"
 
-# Boundary for split municipalities
-if(length(split_code) > 0) {
-  old_boundary <- pref %>%
-    filter(code %in% split_code) %>%
-    summarise(geometry = sf::st_combine(geometry))
-  old_boundary$type <- "Old Municipality Boundaries"
-  
-  boundary <- rbind(old_boundary, mun, gun)
-} else {
-  boundary <- rbind(mun, gun)
-}
-
+boundary <- rbind(mun, gun)
 boundary$type <- factor(boundary$type, levels = boundary$type)
 
 cat("Boundary layers created:\n")
 cat("  Municipality boundaries: ✓\n")
-cat("  County boundaries: ✓\n")
-if(length(split_code) > 0) {
-  cat("  Old municipality boundaries: ✓\n")
-}
-cat("\n")
+cat("  County boundaries: ✓\n\n")
+
 
 # Co-occurrence Analysis
 cat("=== CO-OCCURRENCE ANALYSIS ===\n")
@@ -189,19 +175,19 @@ cl_co <- cluster::agnes(m_co)
 cat("Analyzing dendrogram...\n")
 
 # Create dendrogram plot
-png(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_dendrogram.png")), 
+png(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_dendrogram.png")),
     width = 1200, height = 800)
-plot(as.dendrogram(cl_co), main = paste0("Niigata ", year, " Projection - Dendrogram"))
+plot(as.dendrogram(cl_co), main = paste0("Gifu ", year, " Projection - Dendrogram"))
 abline(h = 2.5, col = "red", lty = 2, lwd = 2)
 abline(h = 2, col = "blue", lty = 2, lwd = 2)
-legend("topright", legend = c("h = 2.5", "h = 2"), 
+legend("topright", legend = c("h = 2.5", "h = 2"),
        col = c("red", "blue"), lty = 2, lwd = 2)
 dev.off()
 
 cat("Dendrogram saved\n")
 
 # Set the number of clusters
-k <- ndists_new  # Use new number of districts as default
+k <- ndists_new
 cat("Number of clusters:", k, "\n\n")
 
 prec_clusters <- cutree(cl_co, k)
@@ -233,11 +219,10 @@ relcomp <- function(a, b) {
 cat("Processing", length(pref$code), "units...\n")
 for (i in 1:length(pref$code)) {
   if(i %% 50 == 0) cat("  Processed", i, "/", length(pref$code), "units\n")
-  
+
   cooc_ratio[i] <- 1 -
     sum(pref$pop[relcomp(prefadj[[i]]+1,
-                         which(prec_clusters == prec_clusters[i]))] * 
-          m_co[i, relcomp(prefadj[[i]]+1,
+                         which(prec_clusters == prec_clusters[i]))] * m_co[i, relcomp(prefadj[[i]]+1,
                           which(prec_clusters == prec_clusters[i]))])/
     sum(pref$pop[prefadj[[i]]+1] * m_co[i, prefadj[[i]]+1])
 }
@@ -250,17 +235,11 @@ cat("  Mean:", round(mean(cooc_ratio), 3), "\n\n")
 cat("=== CREATING VISUALIZATION ===\n")
 cat("Setting up city labels...\n")
 
-# Major cities in Niigata
-# 新潟市 (Niigata City - prefectural capital)
-# 長岡市 (Nagaoka)
-# 上越市 (Joetsu)
-cities <- data.frame(
-  longitude = c(139.036, 138.851, 138.236),
-  latitude = c(37.916, 37.446, 37.148),
-  names = c("Niigata", "Nagaoka", "Joetsu")
-)
-
-cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"), crs = 4612)
+cities <- data.frame(longitude = 136.759944,
+                     latitude = 35.426631,
+                     names = "岐阜市")
+cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"),
+                       crs = 4612)
 
 # Match membership data with map object
 if(ndists_new > 6){
@@ -274,50 +253,44 @@ if(ndists_new > 6){
 # Color Palette
 PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#2A4E45', '#7F4E28', '#E85D75')
 
-
 # Co-occurrence plot
 cat("Creating co-occurrence plot...\n")
 p_cooc <- ggplot() +
-  geom_sf(data = pref_cooc, aes(fill = as.factor(color), alpha = cooc_ratio), 
+  geom_sf(data = pref_cooc, aes(fill = as.factor(color), alpha = cooc_ratio),
           show.legend = FALSE) +
   scale_fill_manual(values = PAL, guide = "none") +
   scale_alpha_continuous(range = c(min(cooc_ratio), max(cooc_ratio)), guide = "none") +
-  
-  # --- START CORRECTION ---
+
   geom_sf(data = boundary, aes(color = type, linetype = type, linewidth = type),
           show.legend = "line", fill = NA) +
-  # Provide 3 values to match the potential 3 boundary types
-  scale_color_manual(values = c("Old Municipality Boundaries" = "#B22222", # Red for old boundary
-                                "Municipality Boundaries" = "#373C38",
-                                "County Boundaries" = "#606264")) +
-  scale_linetype_manual(values = c("Old Municipality Boundaries" = "dashed", # Dashed for old
-                                   "Municipality Boundaries" = "solid",
-                                   "County Boundaries" = "solid")) +
-  scale_discrete_manual("linewidth", values = c("Old Municipality Boundaries" = 0.7, # Slightly thicker
-                                                "Municipality Boundaries" = 0.3,
-                                                "County Boundaries" = 0.6)) +
-  # --- END CORRECTION ---
-  
+  scale_color_manual(values = c("市の境界線" = "#373C38",
+                                "郡の境界線" = "#606264")) +
+  scale_linetype_manual(values = c("市の境界線" = "solid",
+                                   "郡の境界線" = "solid")) +
+  scale_discrete_manual("linewidth", values = c("市の境界線" = 0.3,
+                                                "郡の境界線" = 0.6)) +
+
   geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
   geom_sf_text(data = cities, aes(label = names), size = 3,
                nudge_x = 0.02,
                nudge_y = 0.05,
                color = "black",
                family = "HiraginoSans-W3") +
-  
-  labs(title = paste0("Niigata ", year, " Projection - Co-occurrence Analysis"),
-       subtitle = paste0("Based on top 10% of plans (", length(good_num), " plans)"),
-       caption = paste0("Districts: ", ndists_old, " → ", ndists_new, " | ", 
-                       "Optimal max-to-min: ", 
-                       round(results_sample$max_to_min[results_sample$draw == optimal], 3))) +
-  
+
+  labs(title = paste0("岐阜県（", year, "年人口推計）選挙区共同体"),
+       subtitle = paste0("定数 ", ndists_old, "→", ndists_new, 
+                        " | ", "人口 ", format(sum(pref$pop), big.mark = ","), "人",
+                        " | 1票の格差 ", round(max(pref$pop) / min(pref$pop), 2), "倍"),
+       caption = paste0("上位10%のプランに基づく（", length(good_num), "プラン）")) +
+
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", 
+  theme(legend.position = "right",
         legend.title = element_blank(),
         plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 10))
 
-# Save co-occurrence plot
+plot(p_cooc)
+
 ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_cooccurrence.png")),
        plot = p_cooc, width = 12, height = 10, dpi = 300)
 
@@ -326,7 +299,6 @@ cat("Co-occurrence plot saved\n\n")
 # Optimal Plan visualization
 cat("=== CREATING OPTIMAL PLAN MAP ===\n")
 
-# Set Colors for optimal plan
 if(ndists_new > 6){
   color_pref_map <- optimal_boundary %>%
     mutate(color = redist:::color_graph(pref_map$adj, as.integer(.$district)))
@@ -335,26 +307,18 @@ if(ndists_new > 6){
     mutate(color = district)
 }
 
-
-# Plot optimal plan
 p_optimal <- ggplot() +
   geom_sf(data = color_pref_map, aes(fill = factor(color)), color = NA) +
   scale_fill_manual(values = PAL, guide = "none") +
-  
-  # --- START CORRECTION ---
+
   geom_sf(data = boundary, aes(color = type, linetype = type, linewidth = type),
           show.legend = "line", fill = NA) +
-  # Provide 3 values to match the potential 3 boundary types
-  scale_color_manual(values = c("Old Municipality Boundaries" = "#B22222", # Red for old boundary
-                                "Municipality Boundaries" = "#373C38",
-                                "County Boundaries" = "#606264")) +
-  scale_linetype_manual(values = c("Old Municipality Boundaries" = "dashed", # Dashed for old
-                                   "Municipality Boundaries" = "solid",
-                                   "County Boundaries" = "solid")) +
-  scale_discrete_manual("linewidth", values = c("Old Municipality Boundaries" = 0.7, # Slightly thicker
-                                                "Municipality Boundaries" = 0.3,
-                                                "County Boundaries" = 0.6)) +
-  # --- END CORRECTION ---
+  scale_color_manual(values = c("市の境界線" = "#373C38",
+                                "郡の境界線" = "#606264")) +
+  scale_linetype_manual(values = c("市の境界線" = "solid",
+                                   "郡の境界線" = "solid")) +
+  scale_discrete_manual("linewidth", values = c("市の境界線" = 0.3,
+                                                "郡の境界線" = 0.6)) +
 
   geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
   geom_sf_text(data = cities, aes(label = names), size = 3,
@@ -362,38 +326,29 @@ p_optimal <- ggplot() +
                nudge_y = 0.05,
                color = "black",
                family = "HiraginoSans-W3") +
-  
-  labs(title = paste0("Niigata ", year, " Projection - Optimal Plan"),
-       subtitle = paste0("Plan with lowest population disparity (draw ", optimal, ")"),
-       caption = paste0("Max-to-min ratio: ", 
-                       round(results_sample$max_to_min[results_sample$draw == optimal], 3), 
-                       " | Mun splits: ", optimal_stats$mun_split,
-                       " | Gun splits: ", optimal_stats$gun_split)) +
-  
+
+  labs(title = paste0("岐阜県（", year, "年人口推計）最適区割り案"),
+       subtitle = paste0("人口許容変動率内の区割り案（", optimal, "番）"),
+       caption = paste0("最大最小人口比: ",
+                       round(results_sample$max_to_min[results_sample$draw == optimal], 3),
+                       " | 市の分割: ", optimal_stats$mun_split,
+                       " | 郡の分割: ", optimal_stats$gun_split)) +
+
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", 
+  theme(legend.position = "right",
         legend.title = element_blank(),
         plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 10))
 
-# Save optimal plan
+plot(p_optimal)
+
 ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_optimal.png")),
        plot = p_optimal, width = 12, height = 10, dpi = 300)
 
 cat("Optimal plan map saved\n\n")
 
-# Comparison with current system (if reference plan exists)
-if("lh_2022" %in% unique(sim_smc_pref_ref$draw)) {
-  cat("=== CURRENT SYSTEM COMPARISON ===\n")
-  cat("Note: Current system has", ndists_old, "districts\n")
-  cat("      Future projection has", ndists_new, "districts\n")
-  cat("Direct comparison not possible due to district count change\n\n")
-}
-
-# Save summary statistics
 cat("=== SAVING SUMMARY DATA ===\n")
 
-# Co-occurrence summary
 cooc_summary <- data.frame(
   unit = 1:length(cooc_ratio),
   cluster = prec_clusters,
@@ -408,7 +363,6 @@ write.csv(cooc_summary,
 
 cat("Co-occurrence summary saved\n")
 
-# Cluster statistics
 cluster_stats <- cooc_summary %>%
   group_by(cluster) %>%
   summarise(
@@ -426,23 +380,16 @@ write.csv(cluster_stats,
 
 cat("Cluster statistics saved\n\n")
 
-# Clean up workspace
 cat("=== CLEANING WORKSPACE ===\n")
-cat("Removing intermediate objects...\n")
-
-rm(cl_co, m_co, mun, gun, 
+rm(cl_co, m_co, mun, gun,
    mun_boundary, gun_boundary,
    matrix_optimal, optimal_boundary,
    cities, PAL, cooc_ratio, prec_clusters, pref_membership,
    good_num, sim_smc_pref_good,
    color_pref_map, pref_cooc)
 
-if(exists("old_boundary")) rm(old_boundary)
-
 cat("Workspace cleaned\n\n")
 
-# Save environment
-cat("Saving analysis environment...\n")
 save.image(here(paste("data-out/environment/",
                       as.character(pref_code),
                       "_",
@@ -455,45 +402,4 @@ save.image(here(paste("data-out/environment/",
 
 cat("Environment saved\n\n")
 
-# Final summary
-cat("=== CO-OCCURRENCE ANALYSIS SUMMARY ===\n")
-cat("Prefecture: Niigata (", pref_code, ")\n")
-cat("Projection year:", year, "\n")
-cat("District configuration:", ndists_old, "→", ndists_new, "districts\n")
-cat("Number of clusters:", k, "\n")
-cat("Optimal plan draw:", optimal, "\n")
-cat("Optimal max-to-min ratio:", round(results_sample$max_to_min[results_sample$draw == optimal], 3), "\n\n")
-
-cat("Output files created:\n")
-cat("  1. Dendrogram:", paste0(pref_code, "_", pref_name, "_", year, "_dendrogram.png"), "\n")
-cat("  2. Co-occurrence map:", paste0(pref_code, "_", pref_name, "_", year, "_cooccurrence.png"), "\n")
-cat("  3. Optimal plan map:", paste0(pref_code, "_", pref_name, "_", year, "_optimal.png"), "\n")
-cat("  4. Co-occurrence summary:", paste0(pref_code, "_", pref_name, "_", year, "_cooc_summary.csv"), "\n")
-cat("  5. Cluster statistics:", paste0(pref_code, "_", pref_name, "_", year, "_cluster_stats.csv"), "\n")
-cat("  6. Environment data:", paste0(pref_code, "_", pref_name, "_", year, "_data.Rdata"), "\n\n")
-
-cat("=== NIIGATA FUTURE CO-OCCURRENCE ANALYSIS CONTEXT ===\n")
-cat("Key considerations for", year, "redistricting:\n")
-cat("  - Sea of Japan coastal prefecture with declining population\n")
-cat("  - Major cities: Niigata (prefectural capital), Nagaoka, Joetsu\n")
-cat("  - District reduction from", ndists_old, "to", ndists_new, "reflects ~15% population decline\n")
-cat("  - Mountain areas in the south and coastal plains in the north\n")
-cat("  - Agricultural regions (rice production) and industrial areas\n")
-cat("  - Aging society particularly acute in rural mountain areas\n")
-cat("  - Urban-rural divide considerations in redistricting\n\n")
-
-cat("Clustering insights:\n")
-cat("  - Clusters represent geographically cohesive regions\n")
-cat("  - Co-occurrence ratios show how often areas are districted together\n")
-cat("  - Lower ratios indicate more stable district membership\n")
-cat("  - Analysis based on", length(good_num), "best-performing plans\n\n")
-
-cat("Regional considerations:\n")
-cat("  - Niigata City area (urban core)\n")
-cat("  - Chuetsu region (central, including Nagaoka)\n")
-cat("  - Joetsu region (southwest)\n")
-cat("  - Sado Island (separate geographic entity)\n")
-cat("  - Mountain regions with sparse population\n\n")
-
-cat("CO-OCCURRENCE ANALYSIS COMPLETED SUCCESSFULLY!\n")
-cat("Ready for further analysis and interpretation.\n")
+cat("=== CO-OCCURRENCE ANALYSIS COMPLETED SUCCESSFULLY ===\n")

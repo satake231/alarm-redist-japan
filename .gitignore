@@ -331,3 +331,5 @@ temp/*
 !data-raw/*.rda
 !data-raw/lh_2022
 !data-out/**/*.Rdata
+
+*.csv

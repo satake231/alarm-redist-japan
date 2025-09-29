@@ -6,10 +6,12 @@
 cat("=== STARTING NIIGATA FUTURE POST-PROCESSING ===\n")
 cat("Future projection year:", year, "\n")
 cat("Prefecture: Niigata (", pref_code, ")\n")
-cat("District change:", ndists_old, "→", ndists_new, "\n")
+cat("District change:", ndists_old, "→", ndists_new, "\n\n")
 
 # TODO Define the koiki-renkei areas (広域連携)
 # Define using gun_code if gun was merged
+cat("=== DEFINING KOIKI-RENKEI AREAS ===\n")
+
 # 新潟市、三条市、新発田市、加茂市、燕市、五泉市、
 # 阿賀野市、胎内市、聖籠町、弥彦村、田上町、阿賀町
 koiki_1_codes <-  c(15101:15108, 15204, 15206, 15209, 15213, 15218,
@@ -30,7 +32,7 @@ koiki_5_codes <- c(15213, 15340)
 # 南魚沼市、魚沼市、湯沢町
 koiki_6_codes <- c(15225, 15226, 15460)
 
-cat("Koiki-renkei area codes defined:\n")
+cat("Koiki-renkei areas defined:\n")
 cat("  Area 1 (Niigata core):", length(koiki_1_codes), "codes\n")
 cat("  Area 2 (Nagaoka):", length(koiki_2_codes), "codes\n")
 cat("  Area 3 (Shibata):", length(koiki_3_codes), "codes\n")
@@ -39,7 +41,7 @@ cat("  Area 5 (Tsubame):", length(koiki_5_codes), "codes\n")
 cat("  Area 6 (Minamiuonuma):", length(koiki_6_codes), "codes\n\n")
 
 # Load data
-cat("Loading simulation data...\n")
+cat("=== LOADING SIMULATION DATA ===\n")
 pref_map <- readRDS(here(paste("data-out/map/",
                               as.character(pref_code),
                               "_",
@@ -78,16 +80,17 @@ cat("  Simulation plans:", nrow(sim_smc_pref_ref), "\n")
 cat("  Unique draws:", length(unique(sim_smc_pref_ref$draw)), "\n\n")
 
 # Get plans matrix
-cat("Extracting plans matrix...\n")
+cat("=== EXTRACTING PLANS MATRIX ===\n")
 pref_smc_plans <- redist::get_plans_matrix(sim_smc_pref_ref)
-cat("Plans matrix size:", dim(pref_smc_plans), "\n\n")
+cat("Plans matrix dimensions:", nrow(pref_smc_plans), "x", ncol(pref_smc_plans), "\n\n")
 
 # Calculate max:min ratio
-cat("Calculating population disparity...\n")
+cat("=== CALCULATING POPULATION DISPARITY ===\n")
 wgt_smc <- simulation_weight_disparity_table(sim_smc_pref_ref)
+cat("Weight disparity calculated for", nrow(wgt_smc), "plans\n\n")
 
 # Assign koiki_renkei area codes
-cat("Assigning koiki-renkei area codes...\n")
+cat("=== ASSIGNING KOIKI-RENKEI AREA CODES ===\n")
 koiki_1 <- pref_map$pre_gappei_code
 koiki_1[pref_map$code %in% koiki_1_codes |
           pref_map$gun_code %in% koiki_1_codes] <- 1
@@ -112,35 +115,24 @@ koiki_6 <- pref_map$pre_gappei_code
 koiki_6[pref_map$code %in% koiki_6_codes |
           pref_map$gun_code %in% koiki_6_codes] <- 6
 
-# Assign unique codes to areas that are not part of koiki_renkei areas
-koiki_1[!koiki_1 %in% 1] <-
-  seq(1000, 1000 + length(koiki_1[!koiki_1 %in% c(koiki_1_codes, 1)]) - 1, by = 1)
-koiki_2[!koiki_2 %in% 2] <-
-  seq(1000, 1000 + length(koiki_2[!koiki_2 %in% c(koiki_2_codes, 2)]) - 1, by = 1)
-koiki_3[!koiki_3 %in% 3] <-
-  seq(1000, 1000 + length(koiki_3[!koiki_3 %in% c(koiki_3_codes, 3)]) - 1, by = 1)
-koiki_4[!koiki_4 %in% 4] <-
-  seq(1000, 1000 + length(koiki_4[!koiki_4 %in% c(koiki_4_codes, 4)]) - 1, by = 1)
-koiki_5[!koiki_5 %in% 5] <-
-  seq(1000, 1000 + length(koiki_5[!koiki_5 %in% c(koiki_5_codes, 5)]) - 1, by = 1)
-koiki_6[!koiki_6 %in% 6] <-
-  seq(1000, 1000 + length(koiki_6[!koiki_6 %in% c(koiki_6_codes, 6)]) - 1, by = 1)
-
-cat("Koiki-renkei assignment completed\n\n")
+cat("✓ Koiki-renkei codes assigned\n\n")
 
 # Count number of municipality splits
-cat("Counting splits...\n")
+cat("=== COUNTING SPLITS ===\n")
+cat("Calculating municipality splits...\n")
 num_mun_split <- count_splits(pref_smc_plans, pref_map$code)
 mun_split <- redist::redist.splits(pref_smc_plans, pref_map$code) %>%
   matrix(ncol = ndists_new, byrow = TRUE)
 mun_split <- mun_split[,1]
 
 # Count number of gun splits
+cat("Calculating gun (county) splits...\n")
 gun_split <- redist::redist.splits(pref_smc_plans, pref_map$gun_code) %>%
   matrix(ncol = ndists_new, byrow = TRUE)
 gun_split <- gun_split[,1]
 
 # Count number of koiki renkei splits
+cat("Calculating koiki-renkei splits...\n")
 koiki_split <-
   redist::redist.splits(pref_smc_plans, koiki_1) +
   redist::redist.splits(pref_smc_plans, koiki_2) +
@@ -158,7 +150,7 @@ cat("  Gun splits range:", min(gun_split), "-", max(gun_split), "\n")
 cat("  Koiki splits range:", min(koiki_split), "-", max(koiki_split), "\n\n")
 
 # Compile results
-cat("Compiling results...\n")
+cat("=== COMPILING RESULTS ===\n")
 results <- data.frame(matrix(ncol = 0, nrow = nrow(wgt_smc)))
 results$max_to_min <- wgt_smc$max_to_min
 results$gun_split <- gun_split
@@ -168,10 +160,13 @@ results$multi <-  num_mun_split - mun_split
 results$koiki_split <- koiki_split
 results$draw <- wgt_smc$draw
 
-cat("Results compiled for", nrow(results), "plans\n\n")
+cat("Results compiled for", nrow(results), "plans\n")
+cat("  Columns:", paste(names(results), collapse = ", "), "\n\n")
 
 ## Check contiguity
 cat("=== CONTIGUITY ANALYSIS ===\n")
+cat("Preparing polygon separation for contiguity check...\n")
+
 # Create new data frames
 cols <- c("unit", "code", "pre_gappei_code", "old_mun_name",
           "mun_name", "gun_code", "geometry")
@@ -181,8 +176,10 @@ pref_sep <- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
 # To calculate area size, switch off `geometry (s2)`
 sf_use_s2(FALSE)
 
-cat("Processing polygon separation...\n")
+cat("Processing", nrow(pref_map), "units...\n")
 for (i in 1:nrow(pref_map)) {
+  if(i %% 50 == 0) cat("  Processed", i, "/", nrow(pref_map), "units\n")
+  
   # Convert multipolygons to polygons
   new_rows <- data.frame(unit = i,
                          code = pref_map[i, ]$code,
@@ -209,49 +206,60 @@ sf_use_s2(TRUE)
 # Convert to sf
 pref_largest <- sf::st_as_sf(pref_sep)
 
-cat("Polygon processing completed:", nrow(pref_largest), "units\n")
+cat("✓ Polygon processing completed:", nrow(pref_largest), "units\n\n")
 
 # Add other smaller areas for Niigata contiguity check
 # For Niigata, add 刈羽村 due to its complex geography
+cat("Adding smaller areas for complex geographies...\n")
 add_small <- setNames(data.frame(matrix(ncol = length(cols), nrow = 0)), cols)
 
 # Municipality codes of the areas to add
 add_small_code <- c(15504) # 刈羽村
 add_small_unit <- pref_sep$unit[pref_sep$code %in% add_small_code]
 
-# Create data frame
-pref_sep_add <- pref_sep
-
-# To calculate area size, switch off `geometry (s2)`
-sf_use_s2(FALSE)
-
-for (i in 1:length(add_small_unit)){
-  add_small <-
-    data.frame(unit = add_small_unit[i],
-               code = pref_map[add_small_unit[i], ]$code,
-               pre_gappei_code = pref_map[add_small_unit[i], ]$pre_gappei_code,
-               mun_name = pref_map[add_small_unit[i], ]$mun_name,
-               old_mun_name = pref_map[add_small_unit[i], ]$old_mun_name,
-               gun_code = pref_map[add_small_unit[i], ]$gun_code,
-               geometry = sf::st_cast(pref_map[add_small_unit[i], ]$geometry, "POLYGON"))
-
-  # order by size
-  add_small <- add_small %>%
-    dplyr::mutate(area = sf::st_area(geometry)) %>%
-    dplyr::arrange(desc(area)) %>%
-    # Add areas that are not the largest polygon within the municipality/gun
-    dplyr::filter(row_number()!=1) %>%
-    dplyr::select(-area)
-
-  # row bind
-  pref_sep_add <- rbind(pref_sep_add, add_small)
+if(length(add_small_unit) > 0) {
+  cat("  Adding smaller areas for code", add_small_code, ":", length(add_small_unit), "units\n")
+  
+  # Create data frame
+  pref_sep_add <- pref_sep
+  
+  # To calculate area size, switch off `geometry (s2)`
+  sf_use_s2(FALSE)
+  
+  for (i in 1:length(add_small_unit)){
+    add_small <-
+      data.frame(unit = add_small_unit[i],
+                 code = pref_map[add_small_unit[i], ]$code,
+                 pre_gappei_code = pref_map[add_small_unit[i], ]$pre_gappei_code,
+                 mun_name = pref_map[add_small_unit[i], ]$mun_name,
+                 old_mun_name = pref_map[add_small_unit[i], ]$old_mun_name,
+                 gun_code = pref_map[add_small_unit[i], ]$gun_code,
+                 geometry = sf::st_cast(pref_map[add_small_unit[i], ]$geometry, "POLYGON"))
+  
+    # order by size
+    add_small <- add_small %>%
+      dplyr::mutate(area = sf::st_area(geometry)) %>%
+      dplyr::arrange(desc(area)) %>%
+      # Add areas that are not the largest polygon within the municipality/gun
+      dplyr::filter(row_number()!=1) %>%
+      dplyr::select(-area)
+  
+    # row bind
+    pref_sep_add <- rbind(pref_sep_add, add_small)
+  }
+  
+  # switch on `geometry (s2)`
+  sf_use_s2(TRUE)
+  
+  # Convert into shapefile
+  pref_largest <- sf::st_as_sf(pref_sep_add)
+  
+  cat("  ✓ Smaller areas added\n")
+} else {
+  cat("  No smaller areas to add\n")
 }
 
-# switch on `geometry (s2)`
-sf_use_s2(TRUE)
-
-# Convert into shapefile
-pref_largest <- sf::st_as_sf(pref_sep_add)
+cat("\n")
 
 # Ignore islands and isolated areas
 cat("Creating mainland adjacency...\n")
@@ -264,10 +272,19 @@ mainland_adj <- redist::redist.adjacency(mainland)
 cat("Mainland analysis:\n")
 cat("  Total units:", nrow(pref_largest), "\n")
 cat("  Mainland units:", nrow(mainland), "\n")
-cat("  Isolated units:", nrow(pref_largest) - nrow(mainland), "\n\n")
+cat("  Isolated units (islands):", nrow(pref_largest) - nrow(mainland), "\n")
+cat("  Note: Sado Island connectivity via ferry routes\n\n")
+
+# TODO: Repair adjacency list if necessary
+# For Niigata, ferry connections should handle island connectivity
+# suggest <- geomander::suggest_component_connection(shp = mainland,
+#                                                     adj = mainland_adj)
+# mainland_adj <- geomander::add_edge(mainland_adj,
+#                                     suggest$x,
+#                                     suggest$y)
 
 # Check valid results
-cat("Checking contiguity...\n")
+cat("Checking contiguity for all plans...\n")
 results$valid <- check_contiguous(pref_smc_plans,
                                   mainland,
                                   mainland_adj)
@@ -277,10 +294,11 @@ functioning_results <- results %>%
   dplyr::filter(multi == 0 &
                   valid == TRUE)
 
-cat("Contiguity analysis results:\n")
-cat("  Total plans:", nrow(results), "\n")
-cat("  Valid plans (no multi-splits + contiguous):", nrow(functioning_results), "\n")
-cat("  Invalid plans:", nrow(results) - nrow(functioning_results), "\n\n")
+cat("\n=== CONTIGUITY ANALYSIS RESULTS ===\n")
+cat("Total plans:", nrow(results), "\n")
+cat("Valid plans (no multi-splits + contiguous):", nrow(functioning_results), "\n")
+cat("Invalid plans:", nrow(results) - nrow(functioning_results), "\n")
+cat("Validity rate:", round(nrow(functioning_results) / nrow(results) * 100, 1), "%\n\n")
 
 # nrow(functioning_results) must be over 5,000.
 # If not, increase nsims and run more simulations.
@@ -295,6 +313,7 @@ valid_sample <- functioning_results %>%
   pull(draw) %>%
   sample(n_sample, replace = FALSE)
 
+cat("=== SAMPLING PLANS ===\n")
 cat("Sampling", n_sample, "plans for final analysis\n\n")
 
 # Sampled plans (no reference plan for future projections since districts changed)
@@ -302,22 +321,23 @@ results_sample <- results %>%
   dplyr::filter(draw %in% valid_sample)
 
 # Add summary statistics to the sampled `redist_plan`
-cat("Adding summary statistics...\n")
+cat("=== ADDING SUMMARY STATISTICS ===\n")
+cat("Calculating partisan metrics for sampled plans...\n")
+
 sim_smc_pref_sample <- sim_smc_pref_ref %>%
   dplyr::filter(draw %in% valid_sample) %>%
   partisan_metrics_japan(pref_map) %>%
   dplyr::left_join(results_sample, by = "draw")
 
-cat("Summary statistics added successfully\n\n")
+cat("✓ Summary statistics added successfully\n\n")
 
 # Check the summary statistics
 cat("=== SUMMARY STATISTICS ===\n")
-# Sampled plans
-cat("Sampled", n_sample, "plans:\n")
+cat("Sampled", n_sample, "plans summary:\n")
 summary(sim_smc_pref_sample)
 
-cat("\nAll simulated plans:\n")
-sim_smc_pref_ref %>%
+cat("\n\nAll simulated plans summary:\n")
+all_summary <- sim_smc_pref_ref %>%
   partisan_metrics_japan(pref_map) %>%
   dplyr::left_join(results %>%
                      dplyr::select(mun_split,
@@ -325,15 +345,15 @@ sim_smc_pref_ref %>%
                                    koiki_split,
                                    max_to_min,
                                    draw),
-                   by = "draw") %>%
-  summary()
+                   by = "draw")
+summary(all_summary)
 
 # Check the validation of the sampled plans
 cat("\n=== VALIDATION CHECK ===\n")
 # validate_analysis_japan(sim_smc_pref_sample, pref_map, pref_code, pref_name)
 
 # Key statistics
-cat("Key metrics for", year, "projection:\n")
+cat("\nKey metrics for", year, "projection:\n")
 cat("  Population deviation range:", 
     round(min(sim_smc_pref_sample$plan_dev), 3), "to", 
     round(max(sim_smc_pref_sample$plan_dev), 3), "\n")
@@ -346,46 +366,55 @@ cat("  Municipality splits:",
 cat("  Gun (county) splits:", 
     min(sim_smc_pref_sample$gun_split), "to", 
     max(sim_smc_pref_sample$gun_split), "\n")
+cat("  Koiki-renkei splits:", 
+    min(sim_smc_pref_sample$koiki_split), "to", 
+    max(sim_smc_pref_sample$koiki_split), "\n\n")
 
 # Create output directories
 output_dirs <- c("data-out/plans", "data-out/stats")
 for(dir in output_dirs) {
-  dir.create(here(dir), recursive = TRUE, showWarnings = FALSE)
+  if(!dir.exists(here(dir))) {
+    dir.create(here(dir), recursive = TRUE, showWarnings = FALSE)
+    cat("Created directory:", dir, "\n")
+  }
 }
 
-# Save relevant files to upload to Dataverse
+# Save relevant files
 cat("\n=== SAVING RESULTS ===\n")
+
 # `redist_plans` object
-write_rds(sim_smc_pref_sample,
-          here(paste("data-out/plans/",
-                     as.character(pref_code),
-                     "_",
-                     as.character(pref_name),
-                     "_",
-                     as.character(year),
-                     "_lh_2022_plans.rds",
-                     sep = "")),
-          compress = "xz")
-cat("Saved: plans file\n")
+plans_file <- here(paste("data-out/plans/",
+                        as.character(pref_code),
+                        "_",
+                        as.character(pref_name),
+                        "_",
+                        as.character(year),
+                        "_lh_2022_plans.rds",
+                        sep = ""))
+write_rds(sim_smc_pref_sample, plans_file, compress = "xz")
+cat("✓ Saved: plans file\n")
+cat("  ", basename(plans_file), "\n")
 
 # Export `redist_plans` summary statistics to a csv file
+stats_file <- here(paste("data-out/stats/",
+                        as.character(pref_code),
+                        "_",
+                        as.character(pref_name),
+                        "_",
+                        as.character(year),
+                        "_lh_2022_stats.csv",
+                        sep = ""))
 as_tibble(sim_smc_pref_sample) %>%
   mutate(across(where(is.numeric), format, digits = 4, scientific = FALSE)) %>%
-  write_csv(here(paste("data-out/stats/",
-                       as.character(pref_code),
-                       "_",
-                       as.character(pref_name),
-                       "_",
-                       as.character(year),
-                       "_lh_2022_stats.csv",
-                       sep = "")))
-cat("Saved: statistics file\n")
+  write_csv(stats_file)
+cat("✓ Saved: statistics file\n")
+cat("  ", basename(stats_file), "\n\n")
 
 # Summary of key changes from current system
-cat("\n=== FUTURE PROJECTION IMPACT ANALYSIS ===\n")
+cat("=== FUTURE PROJECTION IMPACT ANALYSIS ===\n")
 cat("District count change:", ndists_old, "→", ndists_new, "\n")
 cat("Decrease in seats:", ndists_old - ndists_new, "\n")
-cat("Percentage decrease:", round((ndists_old - ndists_new) / ndists_old * 100, 1), "%\n")
+cat("Percentage decrease:", round((ndists_old - ndists_new) / ndists_old * 100, 1), "%\n\n")
 
 # Average district size change
 total_pop_2050 <- sum(attr(sim_smc_pref_ref, "prec_pop"), na.rm = TRUE)
@@ -395,6 +424,7 @@ cat("Average district population change:\n")
 cat("  Old system (hypothetical):", format(round(avg_district_pop_old), big.mark = ","), "\n")
 cat("  New system:", format(round(avg_district_pop_new), big.mark = ","), "\n")
 cat("  Increase per district:", format(round(avg_district_pop_new - avg_district_pop_old), big.mark = ","), "\n")
+cat("  Percentage increase:", round((avg_district_pop_new - avg_district_pop_old) / avg_district_pop_old * 100, 1), "%\n\n")
 
 # Population concentration analysis
 sample_plans <- sim_smc_pref_sample %>%
@@ -408,29 +438,37 @@ sample_plans <- sim_smc_pref_sample %>%
 
 cat("District population distribution:\n")
 cat("  CV range:", round(min(sample_plans$pop_cv), 3), "to", round(max(sample_plans$pop_cv), 3), "\n")
-cat("  Median CV:", round(median(sample_plans$pop_cv), 3), "\n")
+cat("  Median CV:", round(median(sample_plans$pop_cv), 3), "\n\n")
 
 # Regional impact analysis
-cat("\nRegional impact:\n")
+cat("Regional impact:\n")
 cat("  Methodology: Standard SMC for rural prefecture\n")
 cat("  Ferry connections: Sado Island to mainland\n")
 cat("  Old municipality boundaries: 長岡市 split along pre-merger lines\n")
+cat("  Koiki-renkei areas: 6 regional cooperation zones\n\n")
 
 # Niigata-specific decline analysis
-cat("\nNiigata-specific context:\n")
+cat("Niigata-specific context:\n")
 cat("  Expected population decline: ~20%\n")
 cat("  Rural area depopulation\n")
 cat("  District reduction needs\n")
 cat("  Aging society accommodation\n")
+cat("  Island representation maintained\n\n")
 
-cat("\nPost-processing completed successfully!\n")
-cat("Files saved with year suffix:", year, "\n")
-cat("Ready for partisan analysis and co-occurrence analysis.\n")
+cat("=== POST-PROCESSING COMPLETED SUCCESSFULLY ===\n")
+cat("✓ Files saved with year suffix:", year, "\n")
+cat("✓ Ready for partisan analysis (04_partisan-analysis)\n")
+cat("✓ Ready for co-occurrence analysis (05_co-occurrence-analysis)\n\n")
 
 # Special note for Niigata
-cat("\n=== NIIGATA FUTURE REDISTRICTING NOTES ===\n")
+cat("=== NIIGATA FUTURE REDISTRICTING NOTES ===\n")
 cat("1. Population decline accommodated by district reduction\n")
 cat("2. Rural prefecture methodology maintains administrative boundaries\n")
-cat("3. Ferry connections preserve island representation\n")
+cat("3. Ferry connections preserve Sado Island representation\n")
 cat("4. Koiki-renkei areas maintain regional cooperation\n")
-cat("5. Old municipality boundaries respect historical divisions\n")
+cat("5. Old municipality boundaries respect historical divisions (Nagaoka)\n")
+cat("6. Mountain areas (Minamiuonuma) maintain distinct representation\n\n")
+
+cat("Next steps:\n")
+cat("  1. source(here('analyses/15_niigata_future/04_partisan-analysis_15_niigata_future.R'))\n")
+cat("  2. source(here('analyses/15_niigata_future/05_co-occurrence-analysis_15_niigata_future.R'))\n")

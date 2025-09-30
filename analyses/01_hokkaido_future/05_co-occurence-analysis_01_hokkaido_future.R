@@ -1,5 +1,5 @@
 ###############################################################################
-# Co-occurrence analysis for `01_hokkaido_future` (Fixed Version)
+# Co-occurrence analysis for `01_hokkaido_future` (完全版)
 # © ALARM Project, May 2023
 ###############################################################################
 
@@ -220,9 +220,11 @@ cities <- data.frame(
 )
 cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"), crs = 4612)
 
-# Color palette
+# Color palette - 十分な色数を確保（最大21色）
 PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F', 
-         '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32')
+         '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32',
+         '#FFD700', '#FF69B4', '#00CED1', '#DA70D6', '#F0E68C', '#90EE90',
+         '#CD853F', '#4169E1', '#FF1493')
 
 # Create co-occurrence plot with municipality-level aggregation
 cat("Creating co-occurrence plot with clean boundaries...\n")
@@ -345,6 +347,21 @@ optimal_plot_ishikari <- ggplot() +
 
 print(optimal_plot_ishikari)
 
+# Save plots
+cat("Saving plots...\n")
+dir.create(here("data-out/co-occurrence"), recursive = TRUE, showWarnings = FALSE)
+
+ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_cooccurrence.png")), 
+      plot = cooccurrence_plot, width = 12, height = 10, dpi = 300)
+
+ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_optimal_plan.png")), 
+      plot = optimal_plot, width = 12, height = 10, dpi = 300)
+
+# Save Ishikari region plot
+ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_optimal_plan_ishikari.png")), 
+      plot = optimal_plot_ishikari, width = 10, height = 8, dpi = 300)
+cat("Saved: optimal_plan_ishikari.png (zoomed Sapporo area)\n")
+
 # Print summary for easy reference
 cat("\n=== OPTIMAL PLAN SUMMARY ===\n")
 cat("Year:", year, "\n")
@@ -372,21 +389,6 @@ if("mun_split" %in% names(results_sample)) {
     cat("Split municipalities likely include Sapporo wards (北区, 西区, 白石区)\n")
   }
 }
-
-# Save plots
-cat("Saving plots...\n")
-dir.create(here("data-out/co-occurrence"), recursive = TRUE, showWarnings = FALSE)
-
-ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_cooccurrence.png")), 
-      plot = cooccurrence_plot, width = 12, height = 10, dpi = 300)
-
-ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_optimal_plan.png")), 
-      plot = optimal_plot, width = 12, height = 10, dpi = 300)
-
-# Save Ishikari region plot
-ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_optimal_plan_ishikari.png")), 
-      plot = optimal_plot_ishikari, width = 10, height = 8, dpi = 300)
-cat("Saved: optimal_plan_ishikari.png (zoomed Sapporo area)\n")
 
 # Save files
 cat("Cleaning up workspace...\n")

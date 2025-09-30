@@ -25,7 +25,7 @@ nsims <- 5000  # Set so that the number of valid plans > 5,000
 pref_code <- 42
 pref_name <- "nagasaki"
 lakes_removed <- c()
-ndists_new <- 3  # 2050年の定数は3のまま（現在と変わらず）
+ndists_new <- 3  # 2050年の定数は3のまま
 ndists_old <- 3
 pop_tol <- 0.25
 lh_old_max_to_min <- 1.418
@@ -109,52 +109,5 @@ pref_mun <- full_join(pop, geom, by = "code") %>%
   full_join(pref_HoC_PR, by = "mun_name")
 pref_mun <- sf::st_as_sf(pref_mun)
 
-# Add future population data
-pref_mun <- pref_mun %>%
-  left_join(future_pop_cleaned, by = "code") %>%
-  mutate(
-    across(starts_with("pop_") & !matches("^pop$"), ~ case_when(
-      !is.na(.x) ~ .x,
-      TRUE ~ as.numeric(pop) * 0.85  # Nagasaki expected to decline by ~15%
-    ))
-  ) %>%
-  mutate(across(starts_with("pop_") & !matches("^pop$"), ~ pmax(as.integer(round(.x)), 1)))
-
-# Handle future population column
-pop_col <- paste0("pop_", year)
-if(!pop_col %in% names(pref_mun)) {
-  cat("Creating", pop_col, "column with 15% decline assumption\n")
-  pref_mun <- pref_mun %>%
-    mutate(!!sym(pop_col) := as.numeric(round(pop * 0.85)))
-}
-
-# Check for missing values
-cat("Missing values in", pop_col, ":", sum(is.na(pref_mun[[pop_col]])), "\n")
-cat("Total", year, "population:", format(sum(pref_mun[[pop_col]], na.rm = TRUE), big.mark = ","), "\n")
-cat("Total 2020 population:", format(sum(pref_mun$pop, na.rm = TRUE), big.mark = ","), "\n")
-cat("Population change ratio:", round(sum(pref_mun[[pop_col]], na.rm = TRUE) / sum(pref_mun$pop, na.rm = TRUE), 3), "\n")
-
-# Confirm that the population figures are reasonable
-cat("Population by major municipalities in", year, ":\n")
-major_cities <- c(42201, 42202, 42203, 42204, 42205, 42207, 42209, 42210)
-for(city_code in major_cities) {
-  city_data <- pref_mun[pref_mun$code == city_code, ]
-  if(nrow(city_data) > 0) {
-    cat("  ", city_data$mun_name[1], "(", city_code, "):", 
-        format(city_data$pop[1], big.mark = ","), "→", 
-        format(city_data[[pop_col]][1], big.mark = ","), "\n")
-  }
-}
-
-# Final validation
-sum(pref_mun$pop, na.rm = TRUE)
-sum(pref_mun$nv_ldp, na.rm = TRUE)
-sum(pref_mun[[pop_col]], na.rm = TRUE)
-
-cat("\n=== NAGASAKI FUTURE PREPARATION SUMMARY ===\n")
-cat("Projection year:", year, "\n")
-cat("District count:", ndists_new, "(unchanged from", ndists_old, ")\n")
-cat("Expected population decline: ~15%\n")
-cat("Split municipalities:", length(split_code), "\n")
-cat("Gun exceptions:", length(gun_exception), "\n")
-cat("Future population data prepared successfully!\n")
+# Confirm that the population figure matches that of the redistricting committee
+sum(pref_mun$pop)

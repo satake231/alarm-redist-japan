@@ -13,41 +13,90 @@ cat("Population projection:", paste0("pop_", year), "\n\n")
 # Determine which population column to use for future projection
 pop_col <- paste0("pop_", year)
 
-# Validate population column exists
-if (!pop_col %in% names(pref_mun)) {
-  stop(paste("ERROR: Population column", pop_col, "not found in data"))
-}
-
-cat("Population data validation:\n")
-cat("  Using column:", pop_col, "\n")
-cat("  Total future population:", format(sum(pref_mun[[pop_col]], na.rm = TRUE), big.mark = ","), "\n")
-cat("  Missing values:", sum(is.na(pref_mun[[pop_col]])), "\n")
-cat("  Average per district:", format(round(sum(pref_mun[[pop_col]], na.rm = TRUE) / ndists_new), big.mark = ","), "\n\n")
-
 # Split the municipalities that are split under the status quo
 split_code <- as.character(split_code)
-cat("Processing split municipalities with future population...\n")
 
-# Reflect old boundaries with future population
+cat("Processing municipalities with future population...\n")
+
+# KEY: Reflect old boundaries using the CURRENT (2020) population first
+# This is the Nagasaki-specific step - we need to split cities first
 pref_mun_old <- reflect_old_boundaries(pref_mun, old_mun, census_mun_old_2020, split_code[1])
 pref_mun_old <- reflect_old_boundaries(pref_mun_old, old_mun, census_mun_old_2020, split_code[2])
 
 # Replace NA values in `old_mun_name`
 pref_mun_old$old_mun_name <- replace_na(pref_mun_old$old_mun_name, "-")
 
-# Re-order and add 郡 codes using future population
+cat("Old boundaries reflected successfully\n")
+cat("  Total units after split:", nrow(pref_mun_old), "\n\n")
+
+# Add future population data to each unit
+# Match with future_pop_cleaned at the municipality level
+cat("Adding future population data...\n")
+
+# For units that are NOT split (sub_name == "-"), directly join future population
+# For units that ARE split, we need to allocate proportionally
+pref_mun_old <- pref_mun_old %>%
+  left_join(future_pop_cleaned %>% select(code, starts_with("pop_")), by = "code")
+
+# Now handle the split municipalities - allocate future population proportionally
+for(split_mun_code in c(42201, 42202)) {
+  # Get all sub-units of this municipality
+  split_units <- pref_mun_old %>%
+    filter(code == split_mun_code)
+  
+  if(nrow(split_units) > 1) {
+    # Calculate proportion based on current (2020) population
+    total_pop_2020 <- sum(split_units$pop, na.rm = TRUE)
+    
+    # For each future population column
+    for(col in names(future_pop_cleaned)[grepl("^pop_", names(future_pop_cleaned))]) {
+      if(col %in% names(pref_mun_old)) {
+        # Get the total future population for this municipality
+        future_total <- unique(split_units[[col]])[1]
+        
+        if(!is.na(future_total)) {
+          # Allocate proportionally to each sub-unit
+          for(i in 1:nrow(split_units)) {
+            unit_idx <- which(pref_mun_old$code == split_mun_code & 
+                             pref_mun_old$pre_gappei_code == split_units$pre_gappei_code[i])
+            if(length(unit_idx) > 0) {
+              pref_mun_old[unit_idx, col] <- round(split_units$pop[i] / total_pop_2020 * future_total)
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# Handle missing future population values with decline assumption
+pref_mun_old <- pref_mun_old %>%
+  mutate(
+    across(starts_with("pop_") & !matches("^pop$"), ~ case_when(
+      !is.na(.x) ~ .x,
+      TRUE ~ as.numeric(pop) * 0.85  # Nagasaki expected to decline by ~15%
+    ))
+  ) %>%
+  mutate(across(starts_with("pop_") & !matches("^pop$"), ~ pmax(as.integer(round(.x)), 1)))
+
+# Verify future population column exists and has no missing values
+if(!pop_col %in% names(pref_mun_old)) {
+  stop(paste("ERROR: Population column", pop_col, "not found"))
+}
+
+cat("Future population added successfully\n")
+cat("  Missing values in", pop_col, ":", sum(is.na(pref_mun_old[[pop_col]])), "\n")
+cat("  Total future population:", format(sum(pref_mun_old[[pop_col]], na.rm = TRUE), big.mark = ","), "\n\n")
+
+# Re-order and add 郡 codes
 cat("Merging gun (county) codes...\n")
 pref <- pref_mun_old %>%
-  mutate(pop_original = pop) %>%
-  mutate(pop = !!sym(pop_col)) %>%
   arrange(code, pre_gappei_code) %>%
-  merge_gun() %>%
-  mutate(!!sym(pop_col) := pop) %>%
-  mutate(pop = pop_original) %>%
-  select(-pop_original)
+  merge_gun()
 
 cat("Gun codes merged successfully\n")
-cat("  Total units:", nrow(pref), "\n\n")
+cat("  Total units:", nrow(pref), "\n")
+cat("  Unique gun codes:", length(unique(pref$gun_code)), "\n\n")
 
 # Make adjacency list
 cat("Creating adjacency matrix...\n")
@@ -62,8 +111,9 @@ prefadj <- geomander::add_edge(prefadj,
                                ferries[, 2],
                                zero = TRUE)
 
-# Manual adjacency repairs for Nagasaki
+# Manual adjacency repairs for Nagasaki (air routes and bridges)
 cat("Adding special adjacencies for islands and bridges...\n")
+
 # Air routes: 対馬市, 壱岐市 to 大村市
 prefadj <- geomander::add_edge(prefadj,
                                which(pref$code == 42209), #対馬市
@@ -71,12 +121,14 @@ prefadj <- geomander::add_edge(prefadj,
 prefadj <- geomander::add_edge(prefadj,
                                which(pref$code == 42210), #壱岐市
                                which(pref$code == 42205)) #大村市
+
 # Bridge: 西海市 to 旧佐世保市
 prefadj <- geomander::add_edge(prefadj,
                                which(pref$code == 42212), #西海市
                                which(pref$pre_gappei_code == 42202)) #旧佐世保市
 
-cat("Special adjacencies added successfully\n\n")
+cat("Special adjacencies added successfully\n")
+cat("  Total adjacency connections:", sum(sapply(prefadj, length)), "\n\n")
 
 # Create redist.map object using future population
 cat("Creating redistricting map object...\n")
@@ -90,7 +142,8 @@ pref_map <- redist::redist_map(pref,
 cat("Redistricting map created:\n")
 cat("  Units:", nrow(pref_map), "\n")
 cat("  Districts:", ndists_new, "\n")
-cat("  Population tolerance:", pop_tol * 100, "%\n\n")
+cat("  Population tolerance:", pop_tol * 100, "%\n")
+cat("  Total population:", format(sum(pref_map[[pop_col]], na.rm = TRUE), big.mark = ","), "\n\n")
 
 # Merge gun (county) units
 cat("Merging gun (county) units for simulation...\n")
@@ -125,7 +178,7 @@ cat("Configuration:\n")
 cat("  Samples per run:", nsims, "\n")
 cat("  Number of runs: 4\n")
 cat("  Population temperance: 0.05\n")
-cat("  This may take 15-30 minutes for future projections...\n\n")
+cat("  This may take 15-30 minutes...\n\n")
 
 set.seed(2020)
 start_time <- Sys.time()
@@ -161,43 +214,49 @@ cat("Pulling back plans to original units...\n")
 sim_smc_pref_pullback <- pullback(sim_smc_pref)
 cat("Pullback completed\n\n")
 
-# Handle reference plan (district count unchanged - add reference)
+# Handle reference plan
 cat("=== REFERENCE PLAN HANDLING ===\n")
-cat("District count unchanged (", ndists_old, "=", ndists_new, ") - adding reference plan\n")
-
-# Export current data for reference
-pref %>%
-  as.data.frame() %>%
-  select("pre_gappei_code", "old_mun_name", "code", "gun_code", "mun_name",
-         pop = all_of(pop_col)) %>%
-  write_excel_csv(here(paste("temp/",
-                            pref_code, "_", pref_name, "_", year, "_export.csv",
-                            sep = "")))
-
-# Try to read existing reference plan
-ref_file <- here(paste("data-raw/lh_2022/",
-                      pref_code, "_", pref_name, "_lh_2022.csv",
-                      sep = ""))
-
-if(file.exists(ref_file)) {
-  dist_lh_2022 <- read_csv(ref_file, show_col_types = FALSE)
+if (ndists_new == ndists_old) {
+  cat("District count unchanged - adding reference plan\n")
   
-  # Add reference plan
-  pref_map$lh_2022 <- dist_lh_2022$lh_2022
-  sim_smc_pref_ref <- add_reference(plans = sim_smc_pref_pullback,
-                                    ref_plan = as.numeric(dist_lh_2022$lh_2022),
-                                    name = "lh_2022")
+  # Export current data for reference
+  pref %>%
+    as.data.frame() %>%
+    select("pre_gappei_code", "old_mun_name", "code", "gun_code", "mun_name",
+           pop = all_of(pop_col)) %>%
+    write_excel_csv(here(paste("temp/",
+                              pref_code, "_", pref_name, "_", year, "_export.csv",
+                              sep = "")))
   
-  # Add total_pop for reference plan using future population
-  for(i in 1:ndists_new){
-    ref_pop <- sum(dist_lh_2022$pop[which(dist_lh_2022$lh_2022 == i)])
-    sim_smc_pref_ref$total_pop[which(sim_smc_pref_ref$draw == "lh_2022" &
-                                      sim_smc_pref_ref$district == i)] <- ref_pop
+  # Try to read existing reference plan
+  ref_file <- here(paste("data-raw/lh_2022/",
+                        pref_code, "_", pref_name, "_lh_2022.csv",
+                        sep = ""))
+  
+  if(file.exists(ref_file)) {
+    dist_lh_2022 <- read_csv(ref_file, show_col_types = FALSE)
+    
+    # Add reference plan
+    pref_map$lh_2022 <- dist_lh_2022$lh_2022
+    sim_smc_pref_ref <- add_reference(plans = sim_smc_pref_pullback,
+                                      ref_plan = as.numeric(dist_lh_2022$lh_2022),
+                                      name = "lh_2022")
+    
+    # Add total_pop for reference plan
+    for(i in 1:ndists_new){
+      ref_pop <- sum(dist_lh_2022$pop[which(dist_lh_2022$lh_2022 == i)])
+      sim_smc_pref_ref$total_pop[which(sim_smc_pref_ref$draw == "lh_2022" &
+                                        sim_smc_pref_ref$district == i)] <- ref_pop
+    }
+    
+    cat("Reference plan (lh_2022) added successfully\n")
+  } else {
+    cat("Reference file not found:", ref_file, "\n")
+    sim_smc_pref_ref <- sim_smc_pref_pullback
   }
   
-  cat("Reference plan (lh_2022) added successfully\n")
 } else {
-  cat("Reference file not found:", ref_file, "\n")
+  cat("District count changed (", ndists_old, "→", ndists_new, ") - no reference plan\n")
   sim_smc_pref_ref <- sim_smc_pref_pullback
 }
 
@@ -238,7 +297,7 @@ for(file_info in files_to_save) {
 # Final summary
 cat("\n=== SIMULATION SUMMARY ===\n")
 cat("Projection year:", year, "\n")
-cat("Districts:", ndists_new, "(unchanged)\n")
+cat("Districts:", ndists_old, "→", ndists_new, "\n")
 cat("Population:", format(sum(pref[[pop_col]], na.rm = TRUE), big.mark = ","), "\n")
 cat("Simulated plans:", nsims * 4, "\n")
 cat("Diversity mean:", round(mean(diversity_scores), 3), "\n")
@@ -253,13 +312,7 @@ for(i in 1:length(split_code)) {
 
 # Gun information  
 cat("\nGun (county) exception (splittable):\n")
-for(gun in gun_exception) {
-  gun_name <- case_when(
-    as.character(gun) == "42380" ~ "北松浦郡",
-    TRUE ~ as.character(gun)
-  )
-  cat("  ", gun, ":", gun_name, "\n")
-}
+cat("  42380: 北松浦郡\n")
 
 # Island connectivity
 cat("\nIsland connectivity:\n")

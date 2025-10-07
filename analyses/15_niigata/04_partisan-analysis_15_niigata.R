@@ -5,11 +5,11 @@
 
 # Load data
 pref_map <- readRDS(here(paste("data-out/map/",
-                               as.character(pref_code),
-                               "_",
-                               as.character(pref_name),
-                               "_lh_2022_map.rds",
-                               sep = "")))
+                              as.character(pref_code),
+                              "_",
+                              as.character(pref_name),
+                              "_lh_2022_map.rds",
+                              sep = "")))
 
 sim_smc_pref_sample <- readRDS(here(paste("data-out/plans/",
                                           as.character(pref_code),
@@ -31,10 +31,10 @@ redist.plot.hist(sim_smc_pref_sample, qty = comp_edge, bins = 10) +
 # Election results by district:
 # Ruling coalition vote share
 redist.plot.distr_qtys(sim_smc_pref_sample, ruling_share,
-                       color_thresh = 0.5)
+                      color_thresh = 0.5)
 # Boxplot
 redist.plot.distr_qtys(sim_smc_pref_sample, ruling_share,
-                       geom = "boxplot")
+                      geom = "boxplot")
 
 # LDP vote share vs Komei vote share
 # Scatter Plot
@@ -46,16 +46,16 @@ sim_smc_pref_sample %>%
   facet_wrap(~dist_by_ruling_share)
 # Dot-plots by Ordered Districts
 redist.plot.distr.custom.color(sim_smc_pref_sample, ruling_share,
-                               color_var = ldp_v_komei) +
+                              color_var = ldp_v_komei) +
   scale_colour_gradient(low = "#f55881", high = "#3CA324")
 
 # Election results by district:
 # Ruling coalition vs opposition coalition that excludes the DPP
 redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_coalition_4,
-                       color_thresh = 0.5)
+                      color_thresh = 0.5)
 # Boxplot
 redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_coalition_4,
-                       geom = "boxplot")
+                      geom = "boxplot")
 
 # LDP vote share vs Komei vote share
 # Scatter Plot
@@ -67,16 +67,16 @@ sim_smc_pref_sample %>%
   facet_wrap(~dist_by_ruling_share)
 # Dot-plots by Ordered Districts
 redist.plot.distr.custom.color(sim_smc_pref_sample, ruling_v_opp_coalition_4,
-                               color_var = ldp_v_komei) +
+                              color_var = ldp_v_komei) +
   scale_colour_gradient(low = "#f55881", high = "#3CA324")
 
 # Election results by district:
 # Ruling coalition vs all major opposition parties
 redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_all,
-                       color_thresh = 0.5)
+                      color_thresh = 0.5)
 # Boxplot
 redist.plot.distr_qtys(sim_smc_pref_sample, ruling_v_opp_all,
-                       geom = "boxplot")
+                      geom = "boxplot")
 
 # LDP vote share vs Komei vote share
 # Scatter Plot
@@ -88,5 +88,5 @@ sim_smc_pref_sample %>%
   facet_wrap(~dist_by_ruling_share)
 # Dot-plots by Ordered Districts
 redist.plot.distr.custom.color(sim_smc_pref_sample, ruling_v_opp_all,
-                               color_var = ldp_v_komei) +
+                              color_var = ldp_v_komei) +
   scale_colour_gradient(low = "#f55881", high = "#3CA324")

@@ -302,6 +302,8 @@ optimal_plot <- ggplot() +
 
 print(optimal_plot)
 
+ggsave(filename = "hokkaido_optimal_2050.png", plot = optimal_plot)
+
 # Create zoomed-in plot for Ishikari region (Sapporo area)
 cat("Creating Ishikari (Sapporo) region zoomed plot...\n")
 
@@ -346,6 +348,8 @@ optimal_plot_ishikari <- ggplot() +
           subtitle = paste0("Zoomed view | Municipality-level aggregation | Draw: ", optimal))
 
 print(optimal_plot_ishikari)
+
+ggsave(filename = "hokkaido_ishikari_optimal_2050.png", plot = optimal_plot_ishikari)
 
 # Save plots
 cat("Saving plots...\n")

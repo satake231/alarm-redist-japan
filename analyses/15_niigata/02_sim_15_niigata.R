@@ -33,9 +33,9 @@ ferries <- ferries %>%
 
 # Add edges
 prefadj <- geomander::add_edge(prefadj,
-                               ferries[, 1],
-                               ferries[, 2],
-                               zero = TRUE)
+                              ferries[, 1],
+                              ferries[, 2],
+                              zero = TRUE)
 
 # Suggest connection between disconnected groups
 # suggest <-  geomander::suggest_component_connection(shp = pref,
@@ -52,24 +52,24 @@ prefadj <- geomander::add_edge(prefadj,
 
 # Create redist.map object
 pref_map <- redist::redist_map(pref,
-                               ndists = ndists_new,
-                               pop_tol= pop_tol,
-                               total_pop = pop,
-                               adj = prefadj,
-                               planarize = 4612)
+                              ndists = ndists_new,
+                              pop_tol= pop_tol,
+                              total_pop = pop,
+                              adj = prefadj,
+                              planarize = 4612)
 
 # Merge gun
 pref_map_merged <- pref_map %>%
   # Convert codes to character
   mutate(pre_gappei_code = as.character(pre_gappei_code),
-         code = as.character(code),
-         gun_code = as.character(gun_code)) %>%
+        code = as.character(code),
+        gun_code = as.character(gun_code)) %>%
   # Only freeze the "gun" that are kept together in the same district under the old plan
   # Make a code to determine which gun to freeze
   # If a gun is one of the gun in `gun_exception`, don't freeze it
   mutate(freeze_code = if_else(gun_code %in% gun_exception,
-                               pre_gappei_code,
-                               gun_code)) %>%
+                              pre_gappei_code,
+                              gun_code)) %>%
   # Group by and merge by `gun_code`
   merge_by(freeze_code, by_existing = FALSE, drop_geom = FALSE) %>%
   # Drop column `freeze_code`
@@ -82,8 +82,8 @@ constr_pref = redist::add_constr_splits(constr_pref,
                                         strength = 1,
                                         admin = pref_map_merged$code)
 constr_pref = redist::add_constr_multisplits(constr_pref,
-                                             strength = 1, # set strength of constraint
-                                             admin = pref_map_merged$code)
+                                            strength = 1, # set strength of constraint
+                                            admin = pref_map_merged$code)
 
 # Run simulation
 set.seed(2020)
@@ -116,17 +116,17 @@ sim_smc_pref_pullback <- pullback(sim_smc_pref)
 pref %>%
   as.data.frame() %>%
   select("pre_gappei_code",
-         "old_mun_name",
-         "code",
-         "gun_code",
-         "pop",
-         "mun_name") %>%
+        "old_mun_name",
+        "code",
+        "gun_code",
+        "pop",
+        "mun_name") %>%
   write_excel_csv(here(paste("temp/",
-                             as.character(pref_code),
-                             "_",
-                             as.character(pref_name),
-                             "_lh_2022.csv",
-                             sep = "")))
+                            as.character(pref_code),
+                            "_",
+                            as.character(pref_name),
+                            "_lh_2022.csv",
+                            sep = "")))
 
 # Read back the CSV to environment
 dist_lh_2022 <- read_csv(here(paste("data-raw/lh_2022/",
@@ -145,7 +145,7 @@ sim_smc_pref_ref <- add_reference(plans = sim_smc_pref_pullback,
 # Add `total_pop`
 for(i in 1:ndists_new){
   sim_smc_pref_ref$total_pop[which(sim_smc_pref_ref$draw == "lh_2022" &
-                                     sim_smc_pref_ref$district == i)] <-
+                                    sim_smc_pref_ref$district == i)] <-
     # Population in District i
     sum(dist_lh_2022$pop[which(dist_lh_2022$lh_2022 == i)])
 }
@@ -155,11 +155,11 @@ attr(sim_smc_pref_ref, "prec_pop") <- pref_map$pop
 
 # Save pref object, pref_map object, adjacency list, and simulation data
 saveRDS(pref, here(paste("data-out/shapefile/",
-                         as.character(pref_code),
-                         "_",
-                         as.character(pref_name),
-                         ".Rds",
-                         sep = "")))
+                        as.character(pref_code),
+                        "_",
+                        as.character(pref_name),
+                        ".Rds",
+                        sep = "")))
 
 saveRDS(prefadj, here(paste("data-out/adj/",
                             as.character(pref_code),
@@ -170,20 +170,20 @@ saveRDS(prefadj, here(paste("data-out/adj/",
 
 # pref_map object: to be uploaded to Dataverse
 write_rds(pref_map, here(paste("data-out/map/",
-                               as.character(pref_code),
-                               "_",
-                               as.character(pref_name),
-                               "_lh_2022_map.rds",
-                               sep = "")),
+                              as.character(pref_code),
+                              "_",
+                              as.character(pref_name),
+                              "_lh_2022_map.rds",
+                              sep = "")),
           compress = "xz")
 
 saveRDS(sim_smc_pref_ref, here(paste("data-out/smc-out/",
-                                     as.character(pref_code),
-                                     "_",
-                                     as.character(pref_name),
-                                     "_",
-                                     as.character(sim_type),
-                                     "_",
-                                     as.character(nsims * 4),
-                                     ".Rds",
-                                     sep = "")))
+                                    as.character(pref_code),
+                                    "_",
+                                    as.character(pref_name),
+                                    "_",
+                                    as.character(sim_type),
+                                    "_",
+                                    as.character(nsims * 4),
+                                    ".Rds",
+                                    sep = "")))

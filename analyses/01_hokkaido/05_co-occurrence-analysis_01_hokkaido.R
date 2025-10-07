@@ -142,7 +142,7 @@ if(ndists_new > 6){
     mutate(color = lh_2022)
 }
 # Plot Map
-ggplot() +
+enaceted_map <- ggplot() +
   geom_sf(data = color_pref_map, aes(fill = factor(color)), color = NA) +
   scale_fill_manual(values = PAL, guide = "none") +
 
@@ -163,6 +163,7 @@ ggplot() +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", legend.title = element_blank())
 
+ggsave(filename = "hokkaido_enacted_2022.png")
 
 # Plot Optimal Plan Map
 if(ndists_new > 6){
@@ -177,7 +178,7 @@ if(ndists_new > 6){
 PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F')
 
 # Plot Optimal Plan Map
-ggplot() +
+optimal_map <- ggplot() +
   geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), color = NA) +
   scale_fill_manual(values = PAL, guide = "none") +
   
@@ -200,6 +201,9 @@ ggplot() +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", legend.title = element_blank()) +
   ggtitle("Optimal Plan (Minimum Population Deviation)")
+
+
+ggsave(filename = "hokkaido_optimal_2022.png", plot = optimal_map)
 
 # Save files
 # Remove the irrelevant objects

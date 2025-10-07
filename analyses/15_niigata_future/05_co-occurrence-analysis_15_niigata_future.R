@@ -372,6 +372,7 @@ optimal_plot <- ggplot() +
                           " | Draw: ", optimal))
 
 print(optimal_plot)
+ggsave(filename = "niigata_optimal_2050.png", plot = optimal_plot)
 
 # Save optimal plan map
 ggsave(here(paste0("data-out/partisan-analysis/", pref_code, "_", pref_name, "_", year, "_optimal_plan.png")),

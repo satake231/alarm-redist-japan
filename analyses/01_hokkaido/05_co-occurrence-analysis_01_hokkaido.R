@@ -163,7 +163,7 @@ enaceted_map <- ggplot() +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", legend.title = element_blank())
 
-ggsave(filename = "hokkaido_enacted_2022.png")
+ggsave(filename = "hokkaido_enacted_2022.png", plot = enaceted_map, width = 10, height = 8, dpi = 300)
 
 # Plot Optimal Plan Map
 if(ndists_new > 6){
@@ -202,8 +202,141 @@ optimal_map <- ggplot() +
   theme(legend.position = "right", legend.title = element_blank()) +
   ggtitle("Optimal Plan (Minimum Population Deviation)")
 
+print(optimal_map)
 
-ggsave(filename = "hokkaido_optimal_2022.png", plot = optimal_map)
+ggsave(filename = "hokkaido_optimal_2022.png", plot = optimal_map, width = 10, height = 8, dpi = 300)
+
+
+###############################################################################
+# Ishikari Region (Sapporo Area) Zoomed Plots - Improved
+###############################################################################
+
+# Define Ishikari region codes
+ishikari_codes <- c(01101, 01102, 01103, 01104, 01105, 01106, 01107, 01108, 01109, 01110,
+                   01217, 01224, 01231, 01234, 01235, 01303, 01304)
+
+# Aggregate color_pref_map to municipality level to eliminate internal boundaries
+color_pref_map_aggregated <- color_pref_map %>%
+  mutate(geometry = st_make_valid(geometry)) %>%
+  group_by(code, color) %>%
+  summarise(
+    mun_name = first(mun_name),
+    pop = sum(pop, na.rm = TRUE),
+    lh_2022 = first(lh_2022),
+    geometry = st_union(geometry),
+    .groups = 'drop'
+  ) %>%
+  mutate(geometry = st_make_valid(geometry))
+
+# 1. Enacted Plan - Ishikari Zoom
+ishikari_enacted <- color_pref_map_aggregated %>%
+  filter(code %in% ishikari_codes)
+
+ishikari_bbox <- sf::st_bbox(ishikari_enacted)
+
+# Filter boundary data for Ishikari region only
+ishikari_boundary_filter <- boundary %>%
+  st_make_valid() %>%
+  st_crop(st_buffer(st_as_sfc(ishikari_bbox), dist = 0.01))
+
+enacted_map_ishikari <- ggplot() +
+  geom_sf(data = ishikari_enacted, aes(fill = factor(color)), 
+          color = "white", size = 0.3) +
+  scale_fill_manual(values = PAL, guide = "none") +
+  
+  geom_sf(data = ishikari_boundary_filter, 
+          aes(color = type, linetype = type, linewidth = type),
+          show.legend = "line", fill = NA) +
+  scale_color_manual(values = c("#000000", "#333333")) +
+  scale_linetype_manual(values = c("solid", "solid")) +
+  scale_discrete_manual("linewidth", values = c(0.6, 0.8)) +
+  
+  geom_sf(data = cities %>% filter(names == "Sapporo"), 
+          size = 3, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+  geom_sf_text(data = cities %>% filter(names == "Sapporo"), 
+              aes(label = names), size = 4,
+              color = "black",
+              nudge_x = 0.02, nudge_y = 0.03,
+              family = "HiraginoSans-W3", fontface = "bold") +
+  
+  coord_sf(xlim = c(ishikari_bbox["xmin"], ishikari_bbox["xmax"]),
+           ylim = c(ishikari_bbox["ymin"], ishikari_bbox["ymax"]),
+           expand = FALSE) +
+  
+  ggthemes::theme_map(base_family = "HiraginoSans-W3") +
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 14, face = "bold")) +
+  ggtitle("2022 Enacted Plan - Ishikari Region (Sapporo Area)",
+          subtitle = "Municipality-level aggregation | Zoomed view")
+
+ggsave(filename = "hokkaido_enacted_2022_ishikari.png", 
+       plot = enacted_map_ishikari, 
+       width = 10, height = 8, dpi = 300)
+
+# 2. Optimal Plan - Ishikari Zoom
+# First aggregate optimal_boundary to municipality level
+optimal_boundary_aggregated <- optimal_boundary %>%
+  mutate(geometry = st_make_valid(geometry)) %>%
+  group_by(code, district) %>%
+  summarise(
+    mun_name = first(mun_name),
+    pop = sum(pop, na.rm = TRUE),
+    geometry = st_union(geometry),
+    .groups = 'drop'
+  ) %>%
+  mutate(geometry = st_make_valid(geometry))
+
+# Re-color after aggregation
+if(ndists_new > 6){
+  optimal_adj_agg <- redist::redist.adjacency(optimal_boundary_aggregated)
+  optimal_boundary_aggregated <- optimal_boundary_aggregated %>%
+    mutate(color = redist:::color_graph(optimal_adj_agg, as.integer(district)))
+} else {
+  optimal_boundary_aggregated <- optimal_boundary_aggregated %>%
+    mutate(color = district)
+}
+
+ishikari_optimal <- optimal_boundary_aggregated %>%
+  filter(code %in% ishikari_codes)
+
+optimal_map_ishikari <- ggplot() +
+  geom_sf(data = ishikari_optimal, aes(fill = factor(color)), 
+          color = "white", size = 0.3) +
+  scale_fill_manual(values = PAL, guide = "none") +
+  
+  geom_sf(data = ishikari_boundary_filter, 
+          aes(color = type, linetype = type, linewidth = type),
+          show.legend = "line", fill = NA) +
+  scale_color_manual(values = c("#000000", "#333333")) +
+  scale_linetype_manual(values = c("solid", "solid")) +
+  scale_discrete_manual("linewidth", values = c(0.6, 0.8)) +
+  
+  geom_sf(data = cities %>% filter(names == "Sapporo"), 
+          size = 3, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+  geom_sf_text(data = cities %>% filter(names == "Sapporo"), 
+              aes(label = names), size = 4,
+              color = "black",
+              nudge_x = 0.02, nudge_y = 0.03,
+              family = "HiraginoSans-W3", fontface = "bold") +
+  
+  coord_sf(xlim = c(ishikari_bbox["xmin"], ishikari_bbox["xmax"]),
+           ylim = c(ishikari_bbox["ymin"], ishikari_bbox["ymax"]),
+           expand = FALSE) +
+  
+  ggthemes::theme_map(base_family = "HiraginoSans-W3") +
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 14, face = "bold")) +
+  ggtitle("Optimal Plan - Ishikari Region (Sapporo Area)",
+          subtitle = paste0("Municipality-level aggregation | 1票の格差: ", 
+                          round(max(optimal_boundary$pop)/min(optimal_boundary$pop), 3)))
+
+ggsave(filename = "hokkaido_optimal_2022_ishikari.png", 
+       plot = optimal_map_ishikari, 
+       width = 10, height = 8, dpi = 300)
+
+cat("Ishikari region zoomed plots (improved) saved successfully!\n")
 
 # Save files
 # Remove the irrelevant objects

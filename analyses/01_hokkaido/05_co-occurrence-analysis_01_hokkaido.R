@@ -141,8 +141,9 @@ if(ndists_new > 6){
   color_pref_map <- pref_map %>%
     mutate(color = lh_2022)
 }
-# Plot Map
-enaceted_map <- ggplot() +
+
+# Plot Map with 1票の格差
+enacted_map <- ggplot() +
   geom_sf(data = color_pref_map, aes(fill = factor(color)), color = NA) +
   scale_fill_manual(values = PAL, guide = "none") +
 
@@ -150,20 +151,27 @@ enaceted_map <- ggplot() +
           show.legend = "line", fill = NA) +
   scale_color_manual(values = c("#373C38", "#606264")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_discrete_manual("linewidth", values = c(0.3, 0.6)) +
+  scale_discrete_manual("linewidth", values = c(0.4, 0.7)) +
 
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
-  geom_sf_text(data = cities, aes(label = names), size = 3,
-              color = c("black", "black", "black"),
-              nudge_x = c(0, 0.2, 0), # adjust the position of the labels
-              nudge_y = c(0.2, -0.1, 0.1), # adjust the position of the labels
-              #"Sapporo", "Hakodate", "Asahikawa"
-              family = "HiraginoSans-W3") +
+  geom_sf(data = cities, size = 3, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+  geom_sf_text(data = cities, aes(label = names), size = 4,
+              color = "black",
+              nudge_x = c(0, 0.2, 0),
+              nudge_y = c(0.2, -0.1, 0.1),
+              family = "HiraginoSans-W3", fontface = "bold") +
 
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", legend.title = element_blank())
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
+  ggtitle("2022 Enacted Plan - Hokkaido",
+          subtitle = paste0("1票の格差: ", lh_2022_max_to_min, " | ", ndists_new, " districts"))
 
-ggsave(filename = "hokkaido_enacted_2022.png", plot = enaceted_map, width = 10, height = 8, dpi = 300)
+print(enacted_map)
+
+ggsave(filename = "hokkaido_enacted_2022.png", plot = enacted_map, width = 12, height = 10, dpi = 300)
+
 
 # Plot Optimal Plan Map
 if(ndists_new > 6){
@@ -174,10 +182,14 @@ if(ndists_new > 6){
     mutate(color = district)
 }
 
+# Calculate optimal plan statistics
+optimal_max_to_min <- round(max(optimal_boundary$pop)/min(optimal_boundary$pop), 3)
+total_population <- sum(optimal_boundary$pop)
+
 # 色パレットを定義
 PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F')
 
-# Plot Optimal Plan Map
+# Plot Optimal Plan Map with detailed subtitle
 optimal_map <- ggplot() +
   geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), color = NA) +
   scale_fill_manual(values = PAL, guide = "none") +
@@ -191,24 +203,32 @@ optimal_map <- ggplot() +
                           c("dotted", "solid", "solid") 
                         else c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = if("old_boundary" %in% ls()) 
-                          c(0.3, 0.3, 0.6) 
-                        else c(0.3, 0.6)) +
+                          c(0.4, 0.4, 0.7) 
+                        else c(0.4, 0.7)) +
   
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
-  geom_sf_text(data = cities, aes(label = names), size = 3,
+  geom_sf(data = cities, size = 3, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+  geom_sf_text(data = cities, aes(label = names), size = 4,
               color = "black",
-              family = "HiraginoSans-W3") +
+              nudge_x = c(0, 0.2, 0),
+              nudge_y = c(0.2, -0.1, 0.1),
+              family = "HiraginoSans-W3", fontface = "bold") +
+  
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", legend.title = element_blank()) +
-  ggtitle("Optimal Plan (Minimum Population Deviation)")
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
+  ggtitle("Optimal Plan (Minimum Population Deviation) - Hokkaido",
+          subtitle = paste0("1票の格差: ", optimal_max_to_min, 
+                          " | ", ndists_new, " districts",
+                          " | Total Pop: ", format(total_population, big.mark = ","),
+                          " | Draw: ", optimal))
 
 print(optimal_map)
 
-ggsave(filename = "hokkaido_optimal_2022.png", plot = optimal_map, width = 10, height = 8, dpi = 300)
-
-
+ggsave(filename = "hokkaido_optimal_2022.png", plot = optimal_map, width = 12, height = 10, dpi = 300)
 ###############################################################################
-# Ishikari Region (Sapporo Area) Zoomed Plots - Improved
+# Ishikari Region (Sapporo Area) Zoomed Plots - Enhanced
 ###############################################################################
 
 # Define Ishikari region codes
@@ -249,12 +269,12 @@ enacted_map_ishikari <- ggplot() +
           show.legend = "line", fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_discrete_manual("linewidth", values = c(0.6, 0.8)) +
+  scale_discrete_manual("linewidth", values = c(0.7, 0.9)) +
   
   geom_sf(data = cities %>% filter(names == "Sapporo"), 
-          size = 3, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+          size = 4, shape = 21, fill = "red", color = "black", stroke = 0.4) +
   geom_sf_text(data = cities %>% filter(names == "Sapporo"), 
-              aes(label = names), size = 4,
+              aes(label = names), size = 5,
               color = "black",
               nudge_x = 0.02, nudge_y = 0.03,
               family = "HiraginoSans-W3", fontface = "bold") +
@@ -266,9 +286,12 @@ enacted_map_ishikari <- ggplot() +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", 
         legend.title = element_blank(),
-        plot.title = element_text(size = 14, face = "bold")) +
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
   ggtitle("2022 Enacted Plan - Ishikari Region (Sapporo Area)",
-          subtitle = "Municipality-level aggregation | Zoomed view")
+          subtitle = paste0("Municipality-level aggregation | Zoomed view | 1票の格差: ", lh_2022_max_to_min))
+
+print(enacted_map_ishikari)
 
 ggsave(filename = "hokkaido_enacted_2022_ishikari.png", 
        plot = enacted_map_ishikari, 
@@ -310,12 +333,12 @@ optimal_map_ishikari <- ggplot() +
           show.legend = "line", fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_discrete_manual("linewidth", values = c(0.6, 0.8)) +
+  scale_discrete_manual("linewidth", values = c(0.7, 0.9)) +
   
   geom_sf(data = cities %>% filter(names == "Sapporo"), 
-          size = 3, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+          size = 4, shape = 21, fill = "red", color = "black", stroke = 0.4) +
   geom_sf_text(data = cities %>% filter(names == "Sapporo"), 
-              aes(label = names), size = 4,
+              aes(label = names), size = 5,
               color = "black",
               nudge_x = 0.02, nudge_y = 0.03,
               family = "HiraginoSans-W3", fontface = "bold") +
@@ -327,17 +350,19 @@ optimal_map_ishikari <- ggplot() +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", 
         legend.title = element_blank(),
-        plot.title = element_text(size = 14, face = "bold")) +
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
   ggtitle("Optimal Plan - Ishikari Region (Sapporo Area)",
-          subtitle = paste0("Municipality-level aggregation | 1票の格差: ", 
+          subtitle = paste0("Municipality-level aggregation | Zoomed view | 1票の格差: ", 
                           round(max(optimal_boundary$pop)/min(optimal_boundary$pop), 3)))
+
+print(optimal_map_ishikari)
 
 ggsave(filename = "hokkaido_optimal_2022_ishikari.png", 
        plot = optimal_map_ishikari, 
        width = 10, height = 8, dpi = 300)
 
-cat("Ishikari region zoomed plots (improved) saved successfully!\n")
-
+cat("Ishikari region zoomed plots (enhanced) saved successfully!\n")
 # Save files
 # Remove the irrelevant objects
 rm(cl_co,

@@ -302,7 +302,7 @@ optimal_plot <- ggplot() +
                           " | Draw: ", optimal))
 print(optimal_plot)
 
-ggsave(filename = "saitama_optimal_2050.png", plot = optimal_plot)
+ggsave(filename = "saitama_optimal_2050.png", plot = optimal_plot, width = 10, height = 8, dpi = 300)
 
 # Print summary for easy reference
 cat("\n=== OPTIMAL PLAN SUMMARY ===\n")

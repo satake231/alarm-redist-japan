@@ -302,7 +302,7 @@ optimal_plot <- ggplot() +
                           " | Draw: ", optimal))
 print(optimal_plot)
 
-ggsave(filename = "saitama_optimal_2050_conditional.png", plot = optimal_plot)
+ggsave(filename = "saitama_optimal_2050.png", plot = optimal_plot, width = 10, height = 8, dpi = 300)
 
 # Print summary for easy reference
 cat("\n=== OPTIMAL PLAN SUMMARY ===\n")
@@ -341,3 +341,90 @@ cat("\nPopulation growth impact:\n")
 cat("  Population increase: ~10% by 2050\n")
 cat("  District increase: 1 seat (", ndists_old, "→", ndists_new, ")\n")
 cat("  Metropolitan area expansion accommodation\n")
+
+# Save files
+cat("Cleaning up workspace...\n")
+# Remove the irrelevant objects
+rm(cl_co,
+  m_co,
+  mun_combined,
+  gun_combined,
+  mun_boundary,
+  gun_boundary,
+  pref_pop_2020,
+  pref_shp_2020,
+  pref_pop_cleaned,
+  pref_shp_cleaned,
+  pref_mun,
+  pref_sep,
+  pref_largest,
+  pref_largest_adj,
+  mainland,
+  mainland_adj,
+  pref_smc_plans,
+  sim_smc_pref_good,
+  wgt_smc,
+  num_mun_split,
+  mun_split,
+  gun_split,
+  koiki_split,
+  matrix_optimal,
+  functioning_results,
+  results,
+  pref_2019_HoC_PR,
+  pref_2019_HoC_PR_cleaned,
+  pref_2022_HoC_PR,
+  pref_2022_HoC_PR_cleaned,
+  pref_HoC_PR,
+  pref,
+  pref_map,
+  pref_map_merged,
+  prefadj,
+  sim_smc_pref_ref,
+  sim_smc_pref_sample,
+  PAL
+)
+
+# Additional Saitama-specific objects to remove
+if(exists("mainland_south")) rm(mainland_south)
+if(exists("mainland_south_adj")) rm(mainland_south_adj)
+if(exists("south_largest")) rm(south_largest)
+if(exists("south_largest_adj")) rm(south_largest_adj)
+if(exists("gun_split_south")) rm(gun_split_south)
+if(exists("mun_split_south")) rm(mun_split_south)
+if(exists("num_mun_split_south")) rm(num_mun_split_south)
+if(exists("no_multi_south")) rm(no_multi_south)
+if(exists("south_map")) rm(south_map)
+if(exists("south_sep")) rm(south_sep)
+if(exists("south_smc_plans")) rm(south_smc_plans)
+if(exists("south_smc_plans_no_multi")) rm(south_smc_plans_no_multi)
+if(exists("results_south")) rm(results_south)
+if(exists("results_south_no_multi")) rm(results_south_no_multi)
+if(exists("sim_smc_south")) rm(sim_smc_south)
+if(exists("sim_smc_south_no_multi")) rm(sim_smc_south_no_multi)
+if(exists("functioning_results_south")) rm(functioning_results_south)
+if(exists("wgt_smc_south")) rm(wgt_smc_south)
+
+save.image(here(paste("data-out/environment/",
+                      as.character(pref_code),
+                      "_",
+                      as.character(pref_name),
+                      "_data",
+                      "_",
+                      as.character(year),
+                      ".Rdata",
+                      sep = "")),
+          compress = "xz")
+
+cat("Co-occurrence analysis completed successfully!\n")
+cat("Results saved with year suffix:", year, "\n")
+cat("Ready for partisan analysis and co-occurrence analysis.\n")
+
+# Special note for Saitama
+cat("\n=== SAITAMA FUTURE REDISTRICTING NOTES ===\n")
+cat("1. Population growth accommodated by district increase\n")
+cat("2. Partial SMC methodology preserves regional balance\n")
+cat("3. Complex urban geography handled through advanced algorithms\n")
+cat("4. 秩父地域 special treatment maintains mountain area representation\n")
+cat("5. Split municipalities reflect urban density patterns\n")
+cat("6. Municipality-level aggregation eliminates internal boundary artifacts\n")

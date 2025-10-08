@@ -121,7 +121,7 @@ ggplot() +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = c(0.3, 0.6)) +
 
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
+  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = c("black", "black", "black", "black"),
               nudge_x = c(0.02, 0, 0, 0.10), # adjust the position of the labels
@@ -130,7 +130,6 @@ ggplot() +
               family = "HiraginoSans-W3") +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", legend.title = element_blank())
-
 
 # Newly Enacted Plan
 # Set Colors for Plot
@@ -141,6 +140,15 @@ if(ndists_new > 6){
   color_pref_map <- pref_map %>%
     mutate(color = lh_2022)
 }
+
+# Calculate 1票の格差 for enacted plan
+enacted_plan_pops <- color_pref_map %>%
+  st_drop_geometry() %>%
+  group_by(lh_2022) %>%
+  summarise(total_pop = sum(pop, na.rm = TRUE), .groups = 'drop')
+
+enacted_max_to_min <- round(max(enacted_plan_pops$total_pop) / min(enacted_plan_pops$total_pop), 3)
+
 # Plot Map
 enacted_map <- ggplot() +
   geom_sf(data = color_pref_map, aes(fill = factor(color)), color = NA) +
@@ -152,7 +160,7 @@ enacted_map <- ggplot() +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = c(0.3, 0.6)) +
 
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
+  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = c("black", "black", "black", "black"),
               nudge_x = c(0.02, 0, 0, 0.10), # adjust the position of the labels
@@ -161,9 +169,14 @@ enacted_map <- ggplot() +
               family = "HiraginoSans-W3") +
 
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", legend.title = element_blank())
+  theme(legend.position = "right", legend.title = element_blank()) +
+  ggtitle(paste0("Enacted Plan - Saitama 2022"),
+          subtitle = paste0("1票の格差: ", enacted_max_to_min))
 
-ggsave(filename = "saitama_enacted_2022.png", plot = enacted_map)
+print(enacted_map)
+
+ggsave(filename = "saitama_enacted_2022.png", plot = enacted_map, width = 10, height = 8, dpi = 300)
+
 
 # Plot Optimal Plan Map
 if(ndists_new > 6){
@@ -173,6 +186,14 @@ if(ndists_new > 6){
   optimal_boundary_colored <- optimal_boundary %>%
     mutate(color = district)
 }
+
+# Calculate population statistics for optimal plan
+optimal_plan_pops <- optimal_boundary_colored %>%
+  st_drop_geometry() %>%
+  group_by(district) %>%
+  summarise(total_pop = sum(pop, na.rm = TRUE), .groups = 'drop')
+
+optimal_max_to_min <- round(max(optimal_plan_pops$total_pop) / min(optimal_plan_pops$total_pop), 3)
 
 # 色パレットを定義
 PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F')
@@ -194,15 +215,18 @@ optimal_map <- ggplot() +
                           c(0.3, 0.3, 0.6) 
                         else c(0.3, 0.6)) +
   
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
+  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = "black",
               family = "HiraginoSans-W3") +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", legend.title = element_blank()) +
-  ggtitle("Optimal Plan (Minimum Population Deviation)")
+  ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Saitama 2022"),
+          subtitle = paste0("1票の格差: ", optimal_max_to_min))
 
-ggsave(filename = "saitama_optimal_2022.png", plot = optimal_map)
+print(optimal_map)
+
+ggsave(filename = "saitama_optimal_2022.png", plot = optimal_map, width = 10, height = 8, dpi = 300)
 
 # Save files
 # Remove the irrelevant objects

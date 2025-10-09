@@ -226,9 +226,7 @@ PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F',
          '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32',
          '#FFD700', '#FF69B4', '#00CED1', '#DA70D6', '#F0E68C', '#90EE90',
          '#CD853F', '#4169E1', '#FF1493')
-
-# Create co-occurrence plot with municipality-level aggregation
-cat("Creating co-occurrence plot with clean boundaries...\n")
+# 既存のcooccurrence_plotを以下に置き換え
 cooccurrence_plot <- ggplot() +
   # Main polygons - 市区町村レベルで集約済み
   geom_sf(data = pref_cooc, aes(fill = as.factor(color), alpha = cooc_ratio), 
@@ -252,26 +250,15 @@ cooccurrence_plot <- ggplot() +
               family = "sans") +
   
   theme_map() +
-  theme(legend.position = "right", legend.title = element_blank()) +
-  ggtitle(paste0("Co-occurrence Analysis - Saitama ", year, " Projection (", ndists_new, " districts)"))
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
+  ggtitle(paste0("Co-occurrence Analysis - Saitama ", year, " Projection"),
+          subtitle = paste0(ndists_new, " districts | ", k, " clusters | Top 10% of ", 
+                          length(results_sample$draw), " plans"))
 
-print(cooccurrence_plot)
-
-# Color assignment for optimal plan - 集約済みデータを使用
-if(ndists_new > 6){
-  optimal_adj <- redist::redist.adjacency(optimal_boundary_aggregated)
-  optimal_boundary_colored <- optimal_boundary_aggregated %>%
-    mutate(color = redist:::color_graph(optimal_adj, as.integer(district)))
-} else {
-  optimal_boundary_colored <- optimal_boundary_aggregated %>%
-    mutate(color = district)
-}
-
-# Create optimal plan plot with clean municipality-level boundaries
-cat("Creating optimal plan map with clean municipality-level boundaries...\n")
-optimal_max_to_min <- round(max(pop_by_district)/min(pop_by_district), 3)
-total_population <- sum(pop_by_district)
-
+# 既存のoptimal_plotを以下に置き換え
 optimal_plot <- ggplot() +
   # Main polygons - 集約済みなので内部境界なし
   geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), 
@@ -294,12 +281,16 @@ optimal_plot <- ggplot() +
               family = "sans") +
   
   theme_map() +
-  theme(legend.position = "right", legend.title = element_blank()) +
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
   ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Saitama ", year, " Projection"),
           subtitle = paste0("1票の格差: ", optimal_max_to_min, 
                           " | Districts: ", ndists_old, "→", ndists_new, 
                           " | Total Pop: ", format(total_population, big.mark = ","), 
                           " | Draw: ", optimal))
+
 print(optimal_plot)
 
 ggsave(filename = "saitama_optimal_2050.png", plot = optimal_plot, width = 10, height = 8, dpi = 300)

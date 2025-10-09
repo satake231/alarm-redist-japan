@@ -226,8 +226,7 @@ PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F',
          '#FFD700', '#FF69B4', '#00CED1', '#DA70D6', '#F0E68C', '#90EE90',
          '#CD853F', '#4169E1', '#FF1493')
 
-# Create co-occurrence plot with municipality-level aggregation
-cat("Creating co-occurrence plot with clean boundaries...\n")
+# 既存のcooccurrence_plotを以下に置き換え
 cooccurrence_plot <- ggplot() +
   # Main polygons - 市区町村レベルで集約済み
   geom_sf(data = pref_cooc, aes(fill = as.factor(color), alpha = cooc_ratio), 
@@ -259,23 +258,7 @@ cooccurrence_plot <- ggplot() +
           subtitle = paste0(ndists_new, " districts | ", k, " clusters | Top 10% of ", 
                           length(results_sample$draw), " plans"))
 
-print(cooccurrence_plot)
-
-# Color assignment for optimal plan - 集約済みデータを使用
-if(ndists_new > 6){
-  optimal_adj <- redist::redist.adjacency(optimal_boundary_aggregated)
-  optimal_boundary_colored <- optimal_boundary_aggregated %>%
-    mutate(color = redist:::color_graph(optimal_adj, as.integer(district)))
-} else {
-  optimal_boundary_colored <- optimal_boundary_aggregated %>%
-    mutate(color = district)
-}
-
-# Create optimal plan plot with clean municipality-level boundaries
-cat("Creating optimal plan map with clean municipality-level boundaries...\n")
-optimal_max_to_min <- round(max(pop_by_district)/min(pop_by_district), 3)  # ここで pop_by_district を使用
-total_population <- sum(pop_by_district)
-
+# 既存のoptimal_plotを以下に置き換え
 optimal_plot <- ggplot() +
   # Main polygons - 集約済みなので内部境界なし
   geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), 
@@ -308,35 +291,12 @@ optimal_plot <- ggplot() +
                           " | Total Pop: ", format(total_population, big.mark = ","), 
                           " | Draw: ", optimal))
 
-print(optimal_plot)
-
-ggsave(filename = "hokkaido_optimal_2050.png", plot = optimal_plot, width = 12, height = 10, dpi = 300)
-
-
-# Create zoomed-in plot for Ishikari region (Sapporo area)
-cat("Creating Ishikari (Sapporo) region zoomed plot...\n")
-
-# Filter data for Ishikari region
-ishikari_codes <- c(01101, 01102, 01103, 01104, 01105, 01106, 01107, 01108, 01109, 01110,
-                   01217, 01224, 01231, 01234, 01235, 01303, 01304)
-
-ishikari_boundary <- optimal_boundary_colored %>%
-  filter(code %in% ishikari_codes)
-
-# Get bounding box for Ishikari region
-ishikari_bbox <- sf::st_bbox(ishikari_boundary)
-
-# Filter boundary data for Ishikari region
-ishikari_boundary_filter <- boundary %>%
-  st_make_valid() %>%
-  st_crop(st_buffer(st_as_sfc(ishikari_bbox), dist = 0.01))
-# Create Ishikari-focused plot
-optimal_plot_ishikari <- ggplot() +
-  geom_sf(data = ishikari_boundary, aes(fill = factor(color)), 
+# Ishikari zoom viewを以下に置き換え
+optimal_map_ishikari <- ggplot() +
+  geom_sf(data = ishikari_optimal, aes(fill = factor(color)), 
           color = "white", size = 0.3) +
   scale_fill_manual(values = PAL, guide = "none") +
   
-  # Filter boundaries for visible area
   geom_sf(data = ishikari_boundary_filter, 
           aes(color = type, linetype = type, size = type),
           show.legend = "line", fill = NA) +
@@ -344,7 +304,6 @@ optimal_plot_ishikari <- ggplot() +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_size_manual(values = c(0.7, 0.9)) +
   
-  # Filter cities for Ishikari (only Sapporo)
   geom_sf(data = cities %>% filter(names == "Sapporo"), 
           size = 4, shape = 21, fill = "red", color = "black", stroke = 0.4) +
   geom_sf_text(data = cities %>% filter(names == "Sapporo"), 

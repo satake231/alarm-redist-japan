@@ -172,7 +172,6 @@ print(enacted_map)
 
 ggsave(filename = "hokkaido_enacted_2022.png", plot = enacted_map, width = 12, height = 10, dpi = 300)
 
-
 # Plot Optimal Plan Map
 if(ndists_new > 6){
   optimal_boundary_colored <- optimal_boundary %>%
@@ -182,9 +181,16 @@ if(ndists_new > 6){
     mutate(color = district)
 }
 
-# Calculate optimal plan statistics
-optimal_max_to_min <- round(max(optimal_boundary$pop)/min(optimal_boundary$pop), 3)
-total_population <- sum(optimal_boundary$pop)
+# Calculate optimal plan statistics BEFORE creating the plot
+# Get population by district from pref_map and optimal plan assignment
+optimal_pop_by_district <- optimal_boundary %>%
+  st_drop_geometry() %>%
+  group_by(district) %>%
+  summarise(total_pop = sum(pop, na.rm = TRUE), .groups = 'drop')
+
+optimal_max_to_min <- round(max(optimal_pop_by_district$total_pop) / 
+                            min(optimal_pop_by_district$total_pop), 3)
+total_population <- sum(optimal_pop_by_district$total_pop)
 
 # 色パレットを定義
 PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F')
@@ -227,6 +233,7 @@ optimal_map <- ggplot() +
 print(optimal_map)
 
 ggsave(filename = "hokkaido_optimal_2022.png", plot = optimal_map, width = 12, height = 10, dpi = 300)
+
 ###############################################################################
 # Ishikari Region (Sapporo Area) Zoomed Plots - Enhanced
 ###############################################################################
@@ -323,6 +330,15 @@ if(ndists_new > 6){
 ishikari_optimal <- optimal_boundary_aggregated %>%
   filter(code %in% ishikari_codes)
 
+# Calculate 1票の格差 for zoom view subtitle
+optimal_zoom_pop <- optimal_boundary_aggregated %>%
+  st_drop_geometry() %>%
+  group_by(district) %>%
+  summarise(total_pop = sum(pop, na.rm = TRUE), .groups = 'drop')
+
+optimal_zoom_kakusa <- round(max(optimal_zoom_pop$total_pop) / 
+                             min(optimal_zoom_pop$total_pop), 3)
+
 optimal_map_ishikari <- ggplot() +
   geom_sf(data = ishikari_optimal, aes(fill = factor(color)), 
           color = "white", size = 0.3) +
@@ -354,7 +370,7 @@ optimal_map_ishikari <- ggplot() +
         plot.subtitle = element_text(size = 12)) +
   ggtitle("Optimal Plan - Ishikari Region (Sapporo Area)",
           subtitle = paste0("Municipality-level aggregation | Zoomed view | 1票の格差: ", 
-                          round(max(optimal_boundary$pop)/min(optimal_boundary$pop), 3)))
+                          optimal_zoom_kakusa))
 
 print(optimal_map_ishikari)
 

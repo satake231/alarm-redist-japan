@@ -240,19 +240,24 @@ cooccurrence_plot <- ggplot() +
           show.legend = "line", fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_size_manual(values = c(0.6, 0.8)) +
+  scale_size_manual(values = c(0.4, 0.7)) +
 
   # Cities and labels
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
-  geom_sf_text(data = cities, aes(label = names), size = 3,
+  geom_sf(data = cities, size = 3, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+  geom_sf_text(data = cities, aes(label = names), size = 4,
               color = "black",
-              nudge_x = c(0.02, 0.2, 0),
-              nudge_y = c(0.02, -0.1, 0.1),
-              family = "sans") +
+              nudge_x = c(0, 0.2, 0),
+              nudge_y = c(0.2, -0.1, 0.1),
+              family = "sans", fontface = "bold") +
   
   theme_map() +
-  theme(legend.position = "right", legend.title = element_blank()) +
-  ggtitle(paste0("Co-occurrence Analysis - Hokkaido ", year, " Projection (", ndists_new, " districts)"))
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
+  ggtitle(paste0("Co-occurrence Analysis - Hokkaido ", year, " Projection"),
+          subtitle = paste0(ndists_new, " districts | ", k, " clusters | Top 10% of ", 
+                          length(results_sample$draw), " plans"))
 
 print(cooccurrence_plot)
 
@@ -268,7 +273,7 @@ if(ndists_new > 6){
 
 # Create optimal plan plot with clean municipality-level boundaries
 cat("Creating optimal plan map with clean municipality-level boundaries...\n")
-optimal_max_to_min <- round(max(pop_by_district)/min(pop_by_district), 3)
+optimal_max_to_min <- round(max(pop_by_district)/min(pop_by_district), 3)  # ここで pop_by_district を使用
 total_population <- sum(pop_by_district)
 
 optimal_plot <- ggplot() +
@@ -282,27 +287,31 @@ optimal_plot <- ggplot() +
           show.legend = "line", fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_size_manual(values = c(0.6, 0.8)) +
+  scale_size_manual(values = c(0.4, 0.7)) +
   
   # Cities and labels
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
-  geom_sf_text(data = cities, aes(label = names), size = 3,
+  geom_sf(data = cities, size = 3, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+  geom_sf_text(data = cities, aes(label = names), size = 4,
               color = "black",
-              nudge_x = c(0.02, 0.2, 0),
-              nudge_y = c(0.02, -0.1, 0.1),
-              family = "sans") +
+              nudge_x = c(0, 0.2, 0),
+              nudge_y = c(0.2, -0.1, 0.1),
+              family = "sans", fontface = "bold") +
   
   theme_map() +
-  theme(legend.position = "right", legend.title = element_blank()) +
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
   ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Hokkaido ", year, " Projection"),
           subtitle = paste0("1票の格差: ", optimal_max_to_min, 
-                          " | Districts: ", ndists_old, "→", ndists_new, 
+                          " | ", ndists_old, "→", ndists_new, " districts",
                           " | Total Pop: ", format(total_population, big.mark = ","), 
                           " | Draw: ", optimal))
 
 print(optimal_plot)
 
-ggsave(filename = "hokkaido_optimal_2050_conditional.png", plot = optimal_plot, width = 10, height = 8, dpi = 300)
+ggsave(filename = "hokkaido_optimal_2050.png", plot = optimal_plot, width = 12, height = 10, dpi = 300)
+
 
 # Create zoomed-in plot for Ishikari region (Sapporo area)
 cat("Creating Ishikari (Sapporo) region zoomed plot...\n")
@@ -317,40 +326,62 @@ ishikari_boundary <- optimal_boundary_colored %>%
 # Get bounding box for Ishikari region
 ishikari_bbox <- sf::st_bbox(ishikari_boundary)
 
+# Filter boundary data for Ishikari region
+ishikari_boundary_filter <- boundary %>%
+  st_make_valid() %>%
+  st_crop(st_buffer(st_as_sfc(ishikari_bbox), dist = 0.01))
 # Create Ishikari-focused plot
 optimal_plot_ishikari <- ggplot() +
-  geom_sf(data = ishikari_boundary, aes(fill = factor(color)), color = "white", size = 0.5) +
+  geom_sf(data = ishikari_boundary, aes(fill = factor(color)), 
+          color = "white", size = 0.3) +
   scale_fill_manual(values = PAL, guide = "none") +
   
   # Filter boundaries for visible area
-  geom_sf(data = boundary, aes(color = type, linetype = type, size = type),
+  geom_sf(data = ishikari_boundary_filter, 
+          aes(color = type, linetype = type, size = type),
           show.legend = "line", fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_size_manual(values = c(0.5, 0.8)) +
+  scale_size_manual(values = c(0.7, 0.9)) +
   
   # Filter cities for Ishikari (only Sapporo)
   geom_sf(data = cities %>% filter(names == "Sapporo"), 
-          size = 3, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+          size = 4, shape = 21, fill = "red", color = "black", stroke = 0.4) +
   geom_sf_text(data = cities %>% filter(names == "Sapporo"), 
-              aes(label = names), size = 4,
+              aes(label = names), size = 5,
               color = "black",
               nudge_x = 0.02, nudge_y = 0.03,
               family = "sans", fontface = "bold") +
   
   coord_sf(xlim = c(ishikari_bbox["xmin"], ishikari_bbox["xmax"]),
-           ylim = c(ishikari_bbox["ymin"], ishikari_bbox["ymax"])) +
+           ylim = c(ishikari_bbox["ymin"], ishikari_bbox["ymax"]),
+           expand = FALSE) +
   
   theme_map() +
-  theme(legend.position = "right", legend.title = element_blank(),
-        axis.text = element_text(size = 8)) +
+  theme(legend.position = "right", 
+        legend.title = element_blank(),
+        plot.title = element_text(size = 16, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
   ggtitle(paste0("Optimal Plan - Ishikari Region (Sapporo Area) - ", year),
-          subtitle = paste0("Zoomed view | Municipality-level aggregation | Draw: ", optimal))
+          subtitle = paste0("Municipality-level aggregation | Zoomed view | Draw: ", optimal))
 
 print(optimal_plot_ishikari)
 
-ggsave(filename = "hokkaido_ishikari_optimal_2050_conditional.png", plot = optimal_plot_ishikari, width = 10, height = 8, dpi = 300)
+ggsave(filename = "hokkaido_ishikari_optimal_2050.png", plot = optimal_plot_ishikari, width = 10, height = 8, dpi = 300)
+# Save plots
+cat("Saving plots...\n")
+dir.create(here("data-out/co-occurrence"), recursive = TRUE, showWarnings = FALSE)
 
+ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_cooccurrence.png")), 
+      plot = cooccurrence_plot, width = 12, height = 10, dpi = 300)
+
+ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_optimal_plan.png")), 
+      plot = optimal_plot, width = 12, height = 10, dpi = 300)
+
+# Save Ishikari region plot
+ggsave(here(paste0("data-out/co-occurrence/", pref_code, "_", pref_name, "_", year, "_optimal_plan_ishikari.png")), 
+      plot = optimal_plot_ishikari, width = 10, height = 8, dpi = 300)
+cat("Saved: optimal_plan_ishikari.png (zoomed Sapporo area)\n")
 
 # Print summary for easy reference
 cat("\n=== OPTIMAL PLAN SUMMARY ===\n")
@@ -379,3 +410,63 @@ if("mun_split" %in% names(results_sample)) {
     cat("Split municipalities likely include Sapporo wards (北区, 西区, 白石区)\n")
   }
 }
+
+# Save files
+cat("Cleaning up workspace...\n")
+# Remove the irrelevant objects
+rm(cl_co,
+  m_co,
+  mun_combined,
+  gun_combined,
+  mun_boundary,
+  gun_boundary,
+  pref_pop_2020,
+  pref_shp_2020,
+  pref_pop_cleaned,
+  pref_shp_cleaned,
+  pref_mun,
+  pref_sep,
+  pref_largest,
+  pref_largest_adj,
+  mainland,
+  mainland_adj,
+  mainland_add_edge,
+  pref_smc_plans,
+  sim_smc_pref_good,
+  wgt_smc,
+  num_mun_split,
+  mun_split,
+  gun_split,
+  koiki_split,
+  matrix_optimal,
+  functioning_results,
+  results,
+  pref_2019_HoC_PR,
+  pref_2019_HoC_PR_cleaned,
+  pref_2022_HoC_PR,
+  pref_2022_HoC_PR_cleaned,
+  pref_HoC_PR,
+  pref,
+  pref_map,
+  pref_map_merged,
+  prefadj,
+  sim_smc_pref_ref,
+  sim_smc_pref_sample,
+  PAL
+)
+
+save.image(here(paste("data-out/environment/",
+                      as.character(pref_code),
+                      "_",
+                      as.character(pref_name),
+                      "_data",
+                      "_",
+                      as.character(year),
+                      ".Rdata",
+                      sep = "")),
+          compress = "xz")
+
+cat("Co-occurrence analysis completed successfully!\n")
+cat("Results saved to data-out/co-occurrence/ and data-out/environment/\n")
+cat("Analysis completed for future projection year:", year, "\n")
+cat("District count change:", ndists_old, "→", ndists_new, "\n")

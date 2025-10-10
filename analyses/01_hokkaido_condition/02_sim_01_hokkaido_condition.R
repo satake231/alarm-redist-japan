@@ -350,8 +350,7 @@ sim_smc_pref <- redist::redist_smc(
   runs = 4L,
   counties = pref_map_merged$code,
   constraints = constr_pref,
-  pop_temper = 0.15,
-  compactness = 1.5) # 人口均等の制約を緩和
+  pop_temper = 0.15)
 
 end_time <- Sys.time()
 cat("SMC simulation completed in:", round(as.numeric(end_time - start_time), 1), "minutes\n\n")

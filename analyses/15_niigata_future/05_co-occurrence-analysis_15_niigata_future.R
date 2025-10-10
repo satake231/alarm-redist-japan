@@ -278,8 +278,7 @@ cat("City labels prepared\n\n")
 PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F', 
          '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32')
 
-# Create co-occurrence plot
-cat("=== CREATING CO-OCCURRENCE PLOT ===\n")
+# Co-occurrence plot（line ~370付近）
 cooccurrence_plot <- ggplot() +
   # Main polygons - municipality-level aggregation
   geom_sf(data = pref_cooc, aes(fill = as.factor(color), alpha = cooc_ratio), 
@@ -304,7 +303,7 @@ cooccurrence_plot <- ggplot() +
   geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = "black",
-              nudge_x = c(-0.05, 0, 0, 0.05, 0, -0.05),  # Niigata, Nagaoka, Joetsu, Shibata, Sanjo, Sado
+              nudge_x = c(-0.05, 0, 0, 0.05, 0, -0.05),
               nudge_y = c(0.08, -0.03, -0.03, 0.03, -0.03, 0.05),
               family = "sans") +
   
@@ -312,17 +311,8 @@ cooccurrence_plot <- ggplot() +
   theme(legend.position = "right", legend.title = element_blank()) +
   ggtitle(paste0("Co-occurrence Analysis - Niigata ", year, " Projection (", ndists_new, " districts)"))
 
-print(cooccurrence_plot)
-
-# Save co-occurrence plot
-ggsave(here(paste0("data-out/partisan-analysis/", pref_code, "_", pref_name, "_", year, "_cooccurrence.png")),
-       plot = cooccurrence_plot, width = 10, height = 8, dpi = 300)
-cat("Co-occurrence plot saved\n\n")
-
-# Create optimal plan map
-cat("=== CREATING OPTIMAL PLAN MAP ===\n")
-
-# Color assignment for optimal plan
+# Optimal plot（line ~410付近）
+# Color assignment for optimal plan（既存のコードはそのまま）
 if(ndists_new > 6){
   optimal_adj <- redist::redist.adjacency(optimal_boundary_aggregated)
   optimal_boundary_colored <- optimal_boundary_aggregated %>%
@@ -332,17 +322,17 @@ if(ndists_new > 6){
     mutate(color = district)
 }
 
-# Calculate statistics for subtitle
+# Calculate statistics for subtitle（ここに追加）
 optimal_max_to_min <- round(max(pop_by_district)/min(pop_by_district), 3)
 total_population <- sum(pop_by_district)
 
 optimal_plot <- ggplot() +
-  # Main polygons - aggregated for clean boundaries
+  # Main polygons - 集約済みなので内部境界なし
   geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), 
           color = "white", size = 0.3) +
   scale_fill_manual(values = PAL, guide = "none") +
   
-  # Administrative boundaries
+  # Administrative boundaries (より太く、明確に)
   geom_sf(data = boundary, aes(color = type, linetype = type, size = type),
           show.legend = "line", fill = NA) +
   scale_color_manual(values = if(length(levels(boundary$type)) == 3) 
@@ -377,6 +367,7 @@ ggsave(filename = "niigata_optimal_2050.png", plot = optimal_plot)
 # Save optimal plan map
 ggsave(here(paste0("data-out/partisan-analysis/", pref_code, "_", pref_name, "_", year, "_optimal_plan.png")),
        plot = optimal_plot, width = 10, height = 8, dpi = 300)
+
 cat("Optimal plan map saved\n\n")
 
 # Print summary for easy reference

@@ -226,74 +226,125 @@ PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F',
          '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32',
          '#FFD700', '#FF69B4', '#00CED1', '#DA70D6', '#F0E68C', '#90EE90',
          '#CD853F', '#4169E1', '#FF1493')
-# 既存のcooccurrence_plotを以下に置き換え
+# 04_partisan-analysis_11_saitama_condition.R の改善版
+
+# 共通テーマ設定を追加
+theme_common <- theme_bw() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 13),
+    plot.caption = element_text(size = 10),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10)
+  )
+
+# Population Deviation（改善版）
+p_dev <- redist.plot.hist(sim_smc_pref_sample, qty = plan_dev, bins = 15) +
+  labs(
+    x = "Population Deviation", 
+    y = "Percentage of Plans",
+    title = paste0("Population Deviation - Saitama ", year, " (Stricter Constraint)"),
+    subtitle = paste0("District count: ", ndists_old, " → ", ndists_new, 
+                     " | pop_tol: ", pop_tol*100, "%"),
+    caption = paste0("Based on ", length(unique(sim_smc_pref_sample$draw)), 
+                    " simulated plans")
+  ) +
+  theme_common
+
+# Ruling Coalition Boxplot（改善版）
+p_ruling_box <- redist.plot.distr_qtys(sim_smc_pref_sample, ruling_share,
+                      geom = "boxplot") +
+  geom_point(data = optimal_plan_data, 
+            aes(x = district, y = ruling_share), 
+            color = "red", size = 4, shape = 15) +  # size 3→4
+  labs(
+    title = paste0("Ruling Coalition Vote Share - Saitama ", year),
+    subtitle = paste0("Boxplots across ", ndists_new, " districts (stricter constraint)"),
+    caption = paste0("Red squares: optimal plan (draw ", optimal_draw, 
+                    ") | Max-to-min: ", 
+                    round(max(optimal_plan_data$total_pop)/min(optimal_plan_data$total_pop), 3)),
+    x = "District (ordered by vote share)", 
+    y = "Ruling Coalition Vote Share"
+  ) +
+  theme_common
+
+# 05_co-occurrence-analysis の改善版
+
+# Co-occurrence plot（統一版）
 cooccurrence_plot <- ggplot() +
-  # Main polygons - 市区町村レベルで集約済み
-  geom_sf(data = pref_cooc, aes(fill = as.factor(color), alpha = cooc_ratio), 
-          color = "white", size = 0.3) +
+  geom_sf(data = pref_cooc, 
+          aes(fill = as.factor(color), alpha = cooc_ratio), 
+          color = "white", size = 0.4) +  # size 0.3→0.4
   scale_fill_manual(values = PAL, guide = "none") +
   scale_alpha_continuous(range = c(0.3, 1.0), guide = "none") +
-  
-  # Boundary lines
-  geom_sf(data = boundary, aes(color = type, linetype = type, size = type),
+  geom_sf(data = boundary, 
+          aes(color = type, linetype = type, size = type),
           show.legend = "line", fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_size_manual(values = c(0.6, 0.8)) +
-
-  # Cities and labels
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
-  geom_sf_text(data = cities, aes(label = names), size = 3,
-              color = "black",
+  scale_size_manual(values = c(0.8, 1.0)) +  # 0.6, 0.8 → 0.8, 1.0
+  geom_sf(data = cities, size = 2.5, shape = 21,  # size 2→2.5
+          fill = "red", color = "black", stroke = 0.4) +  # stroke 0.3→0.4
+  geom_sf_text(data = cities, aes(label = names), 
+              size = 3.5,  # size 3→3.5
+              color = "black", fontface = "bold",
               nudge_x = c(0.02, 0, 0, 0.10, 0, 0.05),
-              nudge_y = c(0.02, -0.02, -0.04, 0, -0.03, 0.02),
-              family = "sans") +
-  
+              nudge_y = c(0.02, -0.02, -0.04, 0, -0.03, 0.02)) +
   theme_map() +
-  theme(legend.position = "right", 
-        legend.title = element_blank(),
-        plot.title = element_text(size = 16, face = "bold"),
-        plot.subtitle = element_text(size = 12)) +
-  ggtitle(paste0("Co-occurrence Analysis - Saitama ", year, " Projection"),
-          subtitle = paste0(ndists_new, " districts | ", k, " clusters | Top 10% of ", 
-                          length(results_sample$draw), " plans"))
+  theme(
+    legend.position = "right", 
+    legend.title = element_blank(),
+    legend.text = element_text(size = 11),  # 追加
+    plot.title = element_text(size = 17, face = "bold"),  # size 16→17
+    plot.subtitle = element_text(size = 13)  # size 12→13
+  ) +
+  ggtitle(
+    paste0("Co-occurrence Analysis - Saitama ", year, " (Stricter Constraint)"),
+    subtitle = paste0(ndists_new, " districts | ", k, " clusters | ",
+                     "Top 10% of ", length(results_sample$draw), " plans | ",
+                     "pop_tol: ", pop_tol*100, "%")
+  )
 
-# 既存のoptimal_plotを以下に置き換え
+# Optimal plan plot（統一版）
 optimal_plot <- ggplot() +
-  # Main polygons - 集約済みなので内部境界なし
-  geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), 
-          color = "white", size = 0.3) +
+  geom_sf(data = optimal_boundary_colored, 
+          aes(fill = factor(color)), 
+          color = "white", size = 0.4) +  # size 0.3→0.4
   scale_fill_manual(values = PAL, guide = "none") +
-  
-  # Administrative boundaries (より太く、明確に)
-  geom_sf(data = boundary, aes(color = type, linetype = type, size = type),
+  geom_sf(data = boundary, 
+          aes(color = type, linetype = type, size = type),
           show.legend = "line", fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_size_manual(values = c(0.6, 0.8)) +
-  
-  # Cities and labels
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
-  geom_sf_text(data = cities, aes(label = names), size = 3,
-              color = "black",
+  scale_size_manual(values = c(0.8, 1.0)) +  # 統一
+  geom_sf(data = cities, size = 2.5, shape = 21,  # 統一
+          fill = "red", color = "black", stroke = 0.4) +
+  geom_sf_text(data = cities, aes(label = names), 
+              size = 3.5, color = "black", fontface = "bold",
               nudge_x = c(0.02, 0, 0, 0.10, 0, 0.05),
-              nudge_y = c(0.02, -0.02, -0.04, 0, -0.03, 0.02),
-              family = "sans") +
-  
+              nudge_y = c(0.02, -0.02, -0.04, 0, -0.03, 0.02)) +
   theme_map() +
-  theme(legend.position = "right", 
-        legend.title = element_blank(),
-        plot.title = element_text(size = 16, face = "bold"),
-        plot.subtitle = element_text(size = 12)) +
-  ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Saitama ", year, " Projection"),
-          subtitle = paste0("1票の格差: ", optimal_max_to_min, 
-                          " | Districts: ", ndists_old, "→", ndists_new, 
-                          " | Total Pop: ", format(total_population, big.mark = ","), 
-                          " | Draw: ", optimal))
+  theme(
+    legend.position = "right", 
+    legend.title = element_blank(),
+    legend.text = element_text(size = 11),
+    plot.title = element_text(size = 17, face = "bold"),
+    plot.subtitle = element_text(size = 13)
+  ) +
+  ggtitle(
+    paste0("Optimal Plan - Saitama ", year, " (Stricter Constraint)"),
+    subtitle = paste0("1票の格差: ", optimal_max_to_min, 
+                     " | Districts: ", ndists_old, "→", ndists_new, 
+                     " | Pop: ", format(total_population, big.mark = ","), 
+                     " | Draw: ", optimal,
+                     " | pop_tol: ", pop_tol*100, "%")
+  )
 
 print(optimal_plot)
 
-ggsave(filename = "saitama_optimal_2050.png", plot = optimal_plot, width = 10, height = 8, dpi = 300)
+ggsave(filename = "saitama_optimal_2050_condition.png", plot = optimal_plot, width = 10, height = 8, dpi = 300)
 
 # Print summary for easy reference
 cat("\n=== OPTIMAL PLAN SUMMARY ===\n")

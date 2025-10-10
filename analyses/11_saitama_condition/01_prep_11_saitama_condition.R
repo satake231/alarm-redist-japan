@@ -21,14 +21,14 @@ setwd(here())
 year <- 2050
 
 sim_type <- "smc"
-nsims_init <- 10000 # Set so that the number of valid plans > 5,000
+nsims_init <- 7500 # Set so that the number of valid plans > 5,000 : 10,000 -> 7,500で負荷軽減
 nsims_all <- 15000
 pref_code <- 11
 pref_name <- "saitama"
 lakes_removed <- c()
 ndists_new <- 17  # 2050年の予測される定数は17（現在の16から増加予定）
 ndists_old <- 16
-pop_tol <- 0.15 # 1票の格差の制約を強化
+pop_tol <- 0.15 # 0.20 -> 0.15 に制約強化
 lh_old_max_to_min <- 1.442
 lh_old_mun_split <- 8
 lh_old_gun_split <- 1

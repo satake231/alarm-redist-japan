@@ -164,7 +164,7 @@ sim_smc_south <- redist::redist_smc(
   # Vector of municipality codes
   # counties = south_map$code,
   # constraints = constr_south,
-  pop_temper = 0.03) # 人口均等制約を強化
+  pop_temper = 0.10)
 
 end_time_south <- Sys.time()
 cat("South region simulation completed in:", round(as.numeric(end_time_south - start_time_south), 1), "minutes\n\n")
@@ -369,9 +369,9 @@ cat("Particles prepared for full simulation\n")
 
 # Set up constraints for full prefecture
 cat("Setting up constraints for full prefecture...\n")
-constr_pref = redist::redist_constr(pref_map_merged)
-constr_pref = redist::add_constr_splits(constr_pref, strength = 1, admin = pref_map_merged$code)
-constr_pref = redist::add_constr_multisplits(constr_pref, strength = 1, admin = pref_map_merged$code)
+# constr_pref = redist::redist_constr(pref_map_merged)
+# constr_pref = redist::add_constr_splits(constr_pref, strength = 1, admin = pref_map_merged$code)
+# constr_pref = redist::add_constr_multisplits(constr_pref, strength = 1, admin = pref_map_merged$code)
 
 # Run full prefecture simulation
 cat("=== STARTING FULL PREFECTURE SIMULATION ===\n")
@@ -391,9 +391,9 @@ sim_smc_pref <- redist::redist_smc(
   runs = 8L,
   # Vector of municipality codes
   counties = pref_map_merged$code,
-  constraints = constr_pref,
+  # constraints = constr_pref,
   init_particles = init,
-  pop_temper = 0.01,
+  pop_temper = 0.02,
   seq_alpha = 0.90)
 
 end_time_full <- Sys.time()

@@ -174,12 +174,12 @@ enacted_map <- ggplot() +
   scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
 
   geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
-  geom_sf_text(data = cities, aes(label = names), size = 3,
+  geom_sf_text(data = cities, aes(label = names), size = 5,
               color = c("black", "black", "black", "black"),
               nudge_x = c(0.02, 0, 0, 0.10), # adjust the position of the labels
               nudge_y = c(0.02, -0.02, -0.04, 0), # adjust the position of the labels
               #"Saitama", "Kawagoe", "Kawaguchi", "Koshigaya"
-              family = "HiraginoSans-W3") +
+              family = "HiraginoSans-W3", fontface = "bold") +
 
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "none", legend.title = element_blank()) +
@@ -230,20 +230,16 @@ optimal_map <- ggplot() +
                                       "right45", "square", "triangle",
                                       "vertical", "horizontal", "left45",
                                       "right45", "square", "triangle")) +
-  scale_color_manual(values = if("old_boundary" %in% ls()) 
-                      c("#606264", "#373C38", "#606264") 
-                    else c("#373C38", "#606264")) +
-  scale_linetype_manual(values = if("old_boundary" %in% ls()) 
-                          c("dotted", "solid", "solid") 
-                        else c("solid", "solid")) +
-  scale_discrete_manual("linewidth", values = if("old_boundary" %in% ls()) 
-                          c(0.3, 0.3, 0.6) 
-                        else c(0.3, 0.6)) +
+  scale_color_manual(values = c("#000000", "#333333")) +
+  scale_linetype_manual(values = c("solid", "solid")) +
+  scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
   
   geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
-  geom_sf_text(data = cities, aes(label = names), size = 3,
+  geom_sf_text(data = cities, aes(label = names), size = 5,
               color = "black",
-              family = "HiraginoSans-W3") +
+              nudge_x = c(0.02, 0, 0, 0.10), # adjust the position of the labels
+              nudge_y = c(0.02, -0.02, -0.04, 0), # adjust the position of the labels
+              family = "HiraginoSans-W3", fontface = "bold") +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "none", legend.title = element_blank()) +
   ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Saitama 2022"),

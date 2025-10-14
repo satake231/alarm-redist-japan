@@ -272,7 +272,7 @@ optimal_max_to_min <- round(max(pop_by_district)/min(pop_by_district), 3)
 total_population <- sum(pop_by_district)
 
 optimal_plot <- ggplot() +
-  geom_sf_pattern(data = color_pref_map, 
+  geom_sf_pattern(data = optimal_boundary_colored, 
                   aes(fill = factor(color), 
                       pattern = factor(color),
                       pattern_type = factor(color)), 
@@ -295,12 +295,12 @@ optimal_plot <- ggplot() +
   scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
   
   # Cities and labels
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+  geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = "black",
               nudge_x = c(0.02, 0, 0, 0.10, 0, 0.05),
               nudge_y = c(0.02, -0.02, -0.04, 0, -0.03, 0.02),
-              family = "sans") +
+              family = "sans", fontface = "bold") +
   
   theme_map() +
   theme(legend.position = "none", legend.title = element_blank()) +

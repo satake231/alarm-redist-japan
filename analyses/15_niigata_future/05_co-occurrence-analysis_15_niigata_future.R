@@ -355,7 +355,7 @@ optimal_plot <- ggplot() +
               color = "black",
               nudge_x = c(-0.05, 0, 0, 0.05, 0, -0.05),
               nudge_y = c(0.08, -0.03, -0.03, 0.03, -0.03, 0.05),
-              family = "sans") +
+              family = "sans", fontface = "bold") +
   
   theme_map() +
   theme(legend.position = "none", legend.title = element_blank()) +

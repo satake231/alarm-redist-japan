@@ -176,6 +176,14 @@ enacted_map <- ggplot() +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
 
+    # Cities and labels
+  geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
+  geom_sf_text(data = cities, aes(label = names), size = 5,
+              color = "black",
+              nudge_x = -0.05,
+              nudge_y = 0.08,
+              family = "sans", fontface = "bold") +
+  
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "none", legend.title = element_blank()) +
   ggtitle(paste0("Enacted Plan - Niigata 2022"),
@@ -237,7 +245,7 @@ optimal_map <- ggplot() +
   geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = "black",
-              family = "HiraginoSans-W3") +
+              family = "HiraginoSans-W3", fontface = "bold") +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "none", legend.title = element_blank()) +
   ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Niigata 2022"),

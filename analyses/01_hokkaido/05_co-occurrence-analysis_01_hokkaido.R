@@ -2,7 +2,7 @@
 # Co-occurrence analysis for `01_hokkaido`
 # © ALARM Project, May 2023
 ###############################################################################
-
+library(ggpattern)
 # Find Optimal Plan
 # Note that `results_sample` includes the data for `lh_2022`
 optimal <- as.numeric(results_sample$draw[which(results_sample$max_to_min ==
@@ -108,7 +108,7 @@ if(ndists_new > 6){
     mutate(color = .$membership)
 }
 ## Reorder Color Palette
-PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#7F4E28')
+PAL <- c('#666666', '#999999', '#CCCCCC', '#E5E5E5', '#000000', '#333333')
 # Co-occurrence plot
 ggplot() +
   geom_sf(data = pref_cooc, aes(fill = as.factor(color), alpha = cooc_ratio), show.legend = FALSE) +
@@ -144,16 +144,29 @@ if(ndists_new > 6){
 
 # Plot Map with 1票の格差
 enacted_map <- ggplot() +
-  geom_sf(data = color_pref_map, aes(fill = factor(color)), color = NA) +
-  scale_fill_manual(values = PAL, guide = "none") +
-
-  geom_sf(data = boundary, aes(color = type, linetype = type, linewidth = type),
-          show.legend = "line", fill = NA) +
-  scale_color_manual(values = c("#373C38", "#606264")) +
+  geom_sf_pattern(data = color_pref_map, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01, # 斜線の間隔
+                  pattern_size = 0.1 ) + # 斜線の太さ
+  
+  scale_fill_grey(start = 0.8, end = 0.95) +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                  "none", "wave", "polygon_tiling",
+                                  "stripe", "circle", "crosshatch",
+                                  "none", "wave", "polygon_tiling")) +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle",
+                                      "vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle")) +
+  scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_discrete_manual("linewidth", values = c(0.4, 0.7)) +
+  scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
 
-  geom_sf(data = cities, size = 3, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+  geom_sf(data = cities, size = 3, shape = 21, fill = "black", color = "white", stroke = 0.4) +
   geom_sf_text(data = cities, aes(label = names), size = 4,
               color = "black",
               nudge_x = c(0, 0.2, 0),
@@ -161,8 +174,7 @@ enacted_map <- ggplot() +
               family = "HiraginoSans-W3", fontface = "bold") +
 
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", 
-        legend.title = element_blank(),
+  theme(legend.position = "none", 
         plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 12)) +
   ggtitle("2022 Enacted Plan - Hokkaido",
@@ -170,7 +182,7 @@ enacted_map <- ggplot() +
 
 print(enacted_map)
 
-ggsave(filename = "hokkaido_enacted_2022.png", plot = enacted_map, width = 12, height = 10, dpi = 300)
+ggsave(filename = "hokkaido_enacted_2022.png", plot = enacted_map, width = 12, height = 10, dpi = 300, bg = "white")
 
 # Plot Optimal Plan Map
 if(ndists_new > 6){
@@ -193,26 +205,36 @@ optimal_max_to_min <- round(max(optimal_pop_by_district$total_pop) /
 total_population <- sum(optimal_pop_by_district$total_pop)
 
 # 色パレットを定義
-PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F')
-
 # Plot Optimal Plan Map with detailed subtitle
+# optimal_boundary_coloredの後に、以下のoptimal_plotを修正
+
 optimal_map <- ggplot() +
-  geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), color = NA) +
-  scale_fill_manual(values = PAL, guide = "none") +
+  # Main polygons - パターン追加
+  geom_sf_pattern(data = optimal_boundary_colored, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01,
+                  pattern_size = 0.1) +
   
-  geom_sf(data = boundary, aes(color = type, linetype = type, linewidth = type),
-          show.legend = "line", fill = NA) +
-  scale_color_manual(values = if("old_boundary" %in% ls()) 
-                      c("#606264", "#373C38", "#606264") 
-                    else c("#373C38", "#606264")) +
-  scale_linetype_manual(values = if("old_boundary" %in% ls()) 
-                          c("dotted", "solid", "solid") 
-                        else c("solid", "solid")) +
-  scale_discrete_manual("linewidth", values = if("old_boundary" %in% ls()) 
-                          c(0.4, 0.4, 0.7) 
-                        else c(0.4, 0.7)) +
+  scale_fill_grey(start = 0.8, end = 0.95) +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                  "none", "wave", "polygon_tiling",
+                                  "stripe", "circle", "crosshatch",
+                                  "none", "wave", "polygon_tiling")) +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle",
+                                      "vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle")) +
+
+  scale_color_manual(values = c("#000000", "#333333")) +
+  scale_linetype_manual(values = c("solid", "solid")) +
+  scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
   
-  geom_sf(data = cities, size = 3, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+  # Cities
+  geom_sf(data = cities, size = 3, shape = 21, fill = "black", color = "white", stroke = 0.6) +
   geom_sf_text(data = cities, aes(label = names), size = 4,
               color = "black",
               nudge_x = c(0, 0.2, 0),
@@ -220,22 +242,24 @@ optimal_map <- ggplot() +
               family = "HiraginoSans-W3", fontface = "bold") +
   
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", 
-        legend.title = element_blank(),
+  theme(legend.position = "none", 
         plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 12)) +
   ggtitle("Optimal Plan (Minimum Population Deviation) - Hokkaido",
           subtitle = paste0("1票の格差: ", optimal_max_to_min, 
                           " | ", ndists_new, " districts",
-                          " | Total Pop: ", format(total_population, big.mark = ","),
+                          " | Total Pop: ", format(total_population, big.mark = ","), 
                           " | Draw: ", optimal))
 
 print(optimal_map)
 
-ggsave(filename = "hokkaido_optimal_2022.png", plot = optimal_map, width = 12, height = 10, dpi = 300)
+ggsave(filename = "hokkaido_optimal_2022.png", plot = optimal_map, width = 12, height = 10, dpi = 300, bg = 'white')
 
 ###############################################################################
 # Ishikari Region (Sapporo Area) Zoomed Plots - Enhanced
+###############################################################################
+###############################################################################
+# Ishikari Region (Sapporo Area) Zoomed Plots - モノクロ対応版
 ###############################################################################
 
 # Define Ishikari region codes
@@ -267,19 +291,36 @@ ishikari_boundary_filter <- boundary %>%
   st_crop(st_buffer(st_as_sfc(ishikari_bbox), dist = 0.01))
 
 enacted_map_ishikari <- ggplot() +
-  geom_sf(data = ishikari_enacted, aes(fill = factor(color)), 
-          color = "white", size = 0.3) +
-  scale_fill_manual(values = PAL, guide = "none") +
+  geom_sf_pattern(data = ishikari_enacted, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01,
+                  pattern_size = 0.1) +
+  
+  scale_fill_grey(start = 0.8, end = 0.95, guide = "none") +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                   "none", "wave", "polygon_tiling",
+                                   "stripe", "circle", "crosshatch",
+                                   "none", "wave", "polygon_tiling"), 
+                       guide = "none") +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                       "right45", "square", "triangle",
+                                       "vertical", "horizontal", "left45",
+                                       "right45", "square", "triangle"),
+                            guide = "none") +
   
   geom_sf(data = ishikari_boundary_filter, 
           aes(color = type, linetype = type, linewidth = type),
-          show.legend = "line", fill = NA) +
+          show.legend = FALSE, fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = c(0.7, 0.9)) +
   
   geom_sf(data = cities %>% filter(names == "Sapporo"), 
-          size = 4, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+          size = 4, shape = 21, fill = "black", color = "white", stroke = 0.6) +
   geom_sf_text(data = cities %>% filter(names == "Sapporo"), 
               aes(label = names), size = 5,
               color = "black",
@@ -291,8 +332,7 @@ enacted_map_ishikari <- ggplot() +
            expand = FALSE) +
   
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", 
-        legend.title = element_blank(),
+  theme(legend.position = "none", 
         plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 12)) +
   ggtitle("2022 Enacted Plan - Ishikari Region (Sapporo Area)",
@@ -302,7 +342,7 @@ print(enacted_map_ishikari)
 
 ggsave(filename = "hokkaido_enacted_2022_ishikari.png", 
        plot = enacted_map_ishikari, 
-       width = 10, height = 8, dpi = 300)
+       width = 10, height = 8, dpi = 300, bg = "white")
 
 # 2. Optimal Plan - Ishikari Zoom
 # First aggregate optimal_boundary to municipality level
@@ -340,19 +380,36 @@ optimal_zoom_kakusa <- round(max(optimal_zoom_pop$total_pop) /
                              min(optimal_zoom_pop$total_pop), 3)
 
 optimal_map_ishikari <- ggplot() +
-  geom_sf(data = ishikari_optimal, aes(fill = factor(color)), 
-          color = "white", size = 0.3) +
-  scale_fill_manual(values = PAL, guide = "none") +
+  geom_sf_pattern(data = ishikari_optimal, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01,
+                  pattern_size = 0.1) +
+  
+  scale_fill_grey(start = 0.8, end = 0.95, guide = "none") +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                   "none", "wave", "polygon_tiling",
+                                   "stripe", "circle", "crosshatch",
+                                   "none", "wave", "polygon_tiling"), 
+                       guide = "none") +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                       "right45", "square", "triangle",
+                                       "vertical", "horizontal", "left45",
+                                       "right45", "square", "triangle"),
+                            guide = "none") +
   
   geom_sf(data = ishikari_boundary_filter, 
           aes(color = type, linetype = type, linewidth = type),
-          show.legend = "line", fill = NA) +
+          show.legend = FALSE, fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = c(0.7, 0.9)) +
   
   geom_sf(data = cities %>% filter(names == "Sapporo"), 
-          size = 4, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+          size = 4, shape = 21, fill = "black", color = "white", stroke = 0.6) +
   geom_sf_text(data = cities %>% filter(names == "Sapporo"), 
               aes(label = names), size = 5,
               color = "black",
@@ -364,8 +421,7 @@ optimal_map_ishikari <- ggplot() +
            expand = FALSE) +
   
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", 
-        legend.title = element_blank(),
+  theme(legend.position = "none", 
         plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 12)) +
   ggtitle("Optimal Plan - Ishikari Region (Sapporo Area)",
@@ -376,8 +432,9 @@ print(optimal_map_ishikari)
 
 ggsave(filename = "hokkaido_optimal_2022_ishikari.png", 
        plot = optimal_map_ishikari, 
-       width = 10, height = 8, dpi = 300)
+       width = 10, height = 8, dpi = 300, bg = "white")
 
+cat("Ishikari region zoomed plots (monochrome) saved successfully!\n")
 cat("Ishikari region zoomed plots (enhanced) saved successfully!\n")
 # Save files
 # Remove the irrelevant objects

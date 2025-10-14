@@ -2,7 +2,7 @@
 # Co-occurrence analysis for `11_saitama`
 # © ALARM Project, April 2023
 ###############################################################################
-
+library(ggpattern)
 # Find Optimal Plan
 # Note that `results_sample` includes the data for `lh_2022`
 optimal <- as.numeric(results_sample$draw[which(results_sample$max_to_min ==
@@ -108,7 +108,7 @@ if(ndists_new > 6){
     mutate(color = .$membership)
 }
 ## Reorder Color Palette
-PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#7F4E28')
+PAL <- c('#666666', '#999999', '#CCCCCC', '#E5E5E5', '#000000', '#333333')
 # Co-occurrence plot
 ggplot() +
   geom_sf(data = pref_cooc, aes(fill = as.factor(color), alpha = cooc_ratio), show.legend = FALSE) +
@@ -151,16 +151,29 @@ enacted_max_to_min <- round(max(enacted_plan_pops$total_pop) / min(enacted_plan_
 
 # Plot Map
 enacted_map <- ggplot() +
-  geom_sf(data = color_pref_map, aes(fill = factor(color)), color = NA) +
-  scale_fill_manual(values = PAL, guide = "none") +
-
-  geom_sf(data = boundary, aes(color = type, linetype = type, linewidth = type),
-          show.legend = "line", fill = NA) +
-  scale_color_manual(values = c("#373C38", "#606264")) +
+  geom_sf_pattern(data = color_pref_map, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01, # 斜線の間隔
+                  pattern_size = 0.1 ) + # 斜線の太さ
+  
+  scale_fill_grey(start = 0.8, end = 0.95) +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                  "none", "wave", "polygon_tiling",
+                                  "stripe", "circle", "crosshatch",
+                                  "none", "wave", "polygon_tiling")) +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle",
+                                      "vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle")) +
+  scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_discrete_manual("linewidth", values = c(0.3, 0.6)) +
+  scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
 
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+  geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = c("black", "black", "black", "black"),
               nudge_x = c(0.02, 0, 0, 0.10), # adjust the position of the labels
@@ -169,13 +182,13 @@ enacted_map <- ggplot() +
               family = "HiraginoSans-W3") +
 
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", legend.title = element_blank()) +
+  theme(legend.position = "none", legend.title = element_blank()) +
   ggtitle(paste0("Enacted Plan - Saitama 2022"),
           subtitle = paste0("1票の格差: ", enacted_max_to_min))
 
 print(enacted_map)
 
-ggsave(filename = "saitama_enacted_2022.png", plot = enacted_map, width = 10, height = 8, dpi = 300)
+ggsave(filename = "saitama_enacted_2022.png", plot = enacted_map, width = 10, height = 8, dpi = 300 ,bg = "white")
 
 
 # Plot Optimal Plan Map
@@ -196,15 +209,27 @@ optimal_plan_pops <- optimal_boundary_colored %>%
 optimal_max_to_min <- round(max(optimal_plan_pops$total_pop) / min(optimal_plan_pops$total_pop), 3)
 
 # 色パレットを定義
-PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F')
-
 # Plot Optimal Plan Map
 optimal_map <- ggplot() +
-  geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), color = NA) +
-  scale_fill_manual(values = PAL, guide = "none") +
+  # Main polygons - パターン追加
+  geom_sf_pattern(data = optimal_boundary_colored, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01,
+                  pattern_size = 0.1) +
   
-  geom_sf(data = boundary, aes(color = type, linetype = type, linewidth = type),
-          show.legend = "line", fill = NA) +
+  scale_fill_grey(start = 0.8, end = 0.95) +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                  "none", "wave", "polygon_tiling",
+                                  "stripe", "circle", "crosshatch",
+                                  "none", "wave", "polygon_tiling")) +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle",
+                                      "vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle")) +
   scale_color_manual(values = if("old_boundary" %in% ls()) 
                       c("#606264", "#373C38", "#606264") 
                     else c("#373C38", "#606264")) +
@@ -215,18 +240,18 @@ optimal_map <- ggplot() +
                           c(0.3, 0.3, 0.6) 
                         else c(0.3, 0.6)) +
   
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+  geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = "black",
               family = "HiraginoSans-W3") +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
-  theme(legend.position = "right", legend.title = element_blank()) +
+  theme(legend.position = "none", legend.title = element_blank()) +
   ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Saitama 2022"),
           subtitle = paste0("1票の格差: ", optimal_max_to_min))
 
 print(optimal_map)
 
-ggsave(filename = "saitama_optimal_2022.png", plot = optimal_map, width = 10, height = 8, dpi = 300)
+ggsave(filename = "saitama_optimal_2022.png", plot = optimal_map, width = 10, height = 8, dpi = 300, bg = "white")
 
 # Save files
 # Remove the irrelevant objects

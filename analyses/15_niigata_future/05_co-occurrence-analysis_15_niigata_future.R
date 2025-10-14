@@ -14,6 +14,7 @@ library(ggthemes)
 library(cluster)
 library(dplyr)
 library(sf)
+library(ggpattern)
 
 # Find Optimal Plan
 cat("=== FINDING OPTIMAL PLAN ===\n")
@@ -275,8 +276,7 @@ cities <- data.frame(
 cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"), crs = 4612)
 cat("City labels prepared\n\n")
 # Color palette
-PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F', 
-         '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32')
+PAL <- c('#666666', '#999999', '#CCCCCC', '#E5E5E5', '#000000', '#333333')
 
 # Co-occurrence plot（line ~370付近）
 cooccurrence_plot <- ggplot() +
@@ -327,26 +327,30 @@ optimal_max_to_min <- round(max(pop_by_district)/min(pop_by_district), 3)
 total_population <- sum(pop_by_district)
 
 optimal_plot <- ggplot() +
-  # Main polygons - 集約済みなので内部境界なし
-  geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), 
-          color = "white", size = 0.3) +
-  scale_fill_manual(values = PAL, guide = "none") +
+  geom_sf_pattern(data = color_pref_map, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01, # 斜線の間隔
+                  pattern_size = 0.1 ) + # 斜線の太さ
   
-  # Administrative boundaries (より太く、明確に)
-  geom_sf(data = boundary, aes(color = type, linetype = type, size = type),
-          show.legend = "line", fill = NA) +
-  scale_color_manual(values = if(length(levels(boundary$type)) == 3) 
-                      c("#606264", "#000000", "#333333") 
-                    else c("#000000", "#333333")) +
-  scale_linetype_manual(values = if(length(levels(boundary$type)) == 3) 
-                          c("dotted", "solid", "solid") 
-                        else c("solid", "solid")) +
-  scale_size_manual(values = if(length(levels(boundary$type)) == 3) 
-                      c(0.3, 0.6, 0.8) 
-                    else c(0.6, 0.8)) +
+  scale_fill_grey(start = 0.8, end = 0.95) +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                  "none", "wave", "polygon_tiling",
+                                  "stripe", "circle", "crosshatch",
+                                  "none", "wave", "polygon_tiling")) +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle",
+                                      "vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle")) +
+  scale_color_manual(values = c("#000000", "#333333")) +
+  scale_linetype_manual(values = c("solid", "solid")) +
+  scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
   
   # Cities and labels
-  geom_sf(data = cities, size = 2, shape = 21, fill = "red", color = "black", stroke = 0.3) +
+  geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = "black",
               nudge_x = c(-0.05, 0, 0, 0.05, 0, -0.05),
@@ -354,7 +358,7 @@ optimal_plot <- ggplot() +
               family = "sans") +
   
   theme_map() +
-  theme(legend.position = "right", legend.title = element_blank()) +
+  theme(legend.position = "none", legend.title = element_blank()) +
   ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Niigata ", year, " Projection"),
           subtitle = paste0("1票の格差: ", optimal_max_to_min, 
                           " | Districts: ", ndists_old, "→", ndists_new, 
@@ -362,7 +366,7 @@ optimal_plot <- ggplot() +
                           " | Draw: ", optimal))
 
 print(optimal_plot)
-ggsave(filename = "niigata_optimal_2050.png", plot = optimal_plot)
+ggsave(filename = "niigata_optimal_2050.png", plot = optimal_plot, bg = "white")
 
 # Save optimal plan map
 ggsave(here(paste0("data-out/partisan-analysis/", pref_code, "_", pref_name, "_", year, "_optimal_plan.png")),

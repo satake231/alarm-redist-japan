@@ -11,6 +11,7 @@ library(ggthemes)
 library(cluster)
 library(dplyr)
 library(sf)
+library(ggpattern)
 
 # Load necessary data
 cat("Loading required data...\n")
@@ -270,10 +271,8 @@ cities <- data.frame(
 cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"), crs = 4612)
 
 # Color palette
-PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F', 
-        '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32',
-        '#FFD700', '#FF69B4', '#00CED1', '#DA70D6', '#F0E68C', '#90EE90',
-        '#CD853F', '#4169E1', '#FF1493')
+PAL <- c('#666666', '#999999', '#CCCCCC', '#E5E5E5', '#000000', '#333333')
+
 # 04_partisan-analysis_11_saitama_condition.R の改善版
 
 # 共通テーマ設定を追加
@@ -370,18 +369,36 @@ cat("Optimal boundary coloring completed\n")
 
 # Optimal plan plot（統一版）
 optimal_plot <- ggplot() +
-  geom_sf(data = optimal_boundary_colored, 
-          aes(fill = factor(color)), 
-          color = "white", size = 0.4) +  # size 0.3→0.4
-  scale_fill_manual(values = PAL, guide = "none") +
-  geom_sf(data = boundary, 
-          aes(color = type, linetype = type, size = type),
-          show.legend = "line", fill = NA) +
-  scale_color_manual(values = c("#000000", "#333333")) +
-  scale_linetype_manual(values = c("solid", "solid")) +
-  scale_size_manual(values = c(0.8, 1.0)) +  # 統一
-  geom_sf(data = cities, size = 2.5, shape = 21,  # 統一
-          fill = "red", color = "black", stroke = 0.4) +
+  # Main polygons - パターン追加
+  geom_sf_pattern(data = optimal_boundary_colored, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01,
+                  pattern_size = 0.1) +
+  
+  scale_fill_grey(start = 0.8, end = 0.95) +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                  "none", "wave", "polygon_tiling",
+                                  "stripe", "circle", "crosshatch",
+                                  "none", "wave", "polygon_tiling")) +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle",
+                                      "vertical", "horizontal", "left45",
+                                      "right45", "square", "triangle")) +
+  scale_color_manual(values = if("old_boundary" %in% ls()) 
+                      c("#606264", "#373C38", "#606264") 
+                    else c("#373C38", "#606264")) +
+  scale_linetype_manual(values = if("old_boundary" %in% ls()) 
+                          c("dotted", "solid", "solid") 
+                        else c("solid", "solid")) +
+  scale_discrete_manual("linewidth", values = if("old_boundary" %in% ls()) 
+                          c(0.3, 0.3, 0.6) 
+                        else c(0.3, 0.6)) +
+  
+  geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), 
               size = 3.5, color = "black", fontface = "bold",
               nudge_x = c(0.02, 0, 0, 0.10, 0, 0.05),

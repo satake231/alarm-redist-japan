@@ -99,11 +99,12 @@ for (i in 1:length(pref$code))
 ## Find the coordinates of the 県庁,
 ## 政令指定都市の市庁舎 (if there is a 政令指定都市 different from 県庁所在地)
 ## and 中核市の市庁舎 (if there is a 中核市 different from 県庁所在地)
-cities <- data.frame(longitude = c(139.036971),
-                    latitude = c(37.915993),
-                    names = c("Niigata"))
-cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"),
-                      crs = 4612)
+cities <- data.frame(
+  longitude = c(139.036971, 138.851420, 138.236717, 139.328178, 138.922507, 138.370000),
+  latitude = c(37.915993, 37.446708, 37.148028, 37.957500, 37.737668, 38.018611),
+  names = c("Niigata", "Nagaoka", "Joetsu", "Shibata", "Sanjo", "Sado")
+)
+cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"), crs = 4612)
 
 # Match membership data with map object
 if(ndists_new > 6){
@@ -129,10 +130,10 @@ ggplot() +
 
   geom_sf(data = cities, size = 2, shape = 21, fill = "red") +
   geom_sf_text(data = cities, aes(label = names), size = 3,
-              nudge_x = -0.05, # adjust the position of the labels
-              nudge_y = 0.08, # adjust the position of the labels
               color = "black",
-              family = "HiraginoSans-W3") +
+              nudge_x = c(-0.05, 0, 0, 0.05, 0, -0.05),
+              nudge_y = c(0.08, -0.03, -0.03, 0.03, -0.03, 0.05),
+              family = "sans", fontface = "bold") +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "right", legend.title = element_blank())
 
@@ -163,25 +164,25 @@ enacted_map <- ggplot() +
                   pattern_spacing = 0.01, # 斜線の間隔
                   pattern_size = 0.1 ) + # 斜線の太さ
   
-  scale_fill_grey(start = 0.8, end = 0.95) +
+  scale_fill_grey(start = 0.6, end = 0.95) +
   scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
                                   "none", "wave", "polygon_tiling",
                                   "stripe", "circle", "crosshatch",
                                   "none", "wave", "polygon_tiling")) +
   scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
-                                      "right45", "square", "triangle",
+                                      "right45", "sine", "triangle",
                                       "vertical", "horizontal", "left45",
-                                      "right45", "square", "triangle")) +
+                                      "right45", "sine", "triangle")) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +
 
     # Cities and labels
   geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
-  geom_sf_text(data = cities, aes(label = names), size = 5,
+  geom_sf_text(data = cities, aes(label = names), size = 3,
               color = "black",
-              nudge_x = -0.05,
-              nudge_y = 0.08,
+              nudge_x = c(-0.05, 0, 0, 0.05, 0, -0.05),
+              nudge_y = c(0.08, -0.03, -0.03, 0.03, -0.03, 0.05),
               family = "sans", fontface = "bold") +
   
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
@@ -229,9 +230,9 @@ optimal_map <- ggplot() +
                                   "stripe", "circle", "crosshatch",
                                   "none", "wave", "polygon_tiling")) +
   scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
-                                      "right45", "square", "triangle",
+                                      "right45", "sine", "triangle",
                                       "vertical", "horizontal", "left45",
-                                      "right45", "square", "triangle")) +
+                                      "right45", "sine", "triangle")) +
   scale_color_manual(values = if("old_boundary" %in% ls()) 
                       c("#606264", "#373C38", "#606264") 
                     else c("#373C38", "#606264")) +
@@ -245,7 +246,9 @@ optimal_map <- ggplot() +
   geom_sf(data = cities, size = 2, shape = 21, fill = "white", color = "black", stroke = 0.3) +
   geom_sf_text(data = cities, aes(label = names), size = 3,
               color = "black",
-              family = "HiraginoSans-W3", fontface = "bold") +
+              nudge_x = c(-0.05, 0, 0, 0.05, 0, -0.05),
+              nudge_y = c(0.08, -0.03, -0.03, 0.03, -0.03, 0.05),
+              family = "sans", fontface = "bold") +
   ggthemes::theme_map(base_family = "HiraginoSans-W3") +
   theme(legend.position = "none", legend.title = element_blank()) +
   ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Niigata 2022"),

@@ -336,15 +336,15 @@ optimal_plot <- ggplot() +
                   pattern_spacing = 0.01, # 斜線の間隔
                   pattern_size = 0.1 ) + # 斜線の太さ
   
-  scale_fill_grey(start = 0.8, end = 0.95) +
+  scale_fill_grey(start = 0.6, end = 0.95) +
   scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
                                   "none", "wave", "polygon_tiling",
                                   "stripe", "circle", "crosshatch",
                                   "none", "wave", "polygon_tiling")) +
   scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
-                                      "right45", "square", "triangle",
+                                      "right45", "sine", "triangle",
                                       "vertical", "horizontal", "left45",
-                                      "right45", "square", "triangle")) +
+                                      "right45", "sine", "triangle")) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = c(0.2, 0.7)) +

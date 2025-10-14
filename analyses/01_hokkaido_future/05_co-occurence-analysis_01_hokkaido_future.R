@@ -307,9 +307,7 @@ optimal_plot <- ggplot() +
                                        "vertical", "horizontal", "left45",
                                        "right45"),
                             guide = "none") +
-  
-  geom_sf(data = boundary, aes(color = type, linetype = type, linewidth = type),
-          show.legend = FALSE, fill = NA) +
+
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
   scale_discrete_manual("linewidth", values = c(0.4, 0.7)) +

@@ -11,6 +11,7 @@ library(ggthemes)
 library(cluster)
 library(dplyr)
 library(sf)
+library(ggpattern)
 
 # Find Optimal Plan
 optimal <- as.numeric(results_sample$draw[which(results_sample$max_to_min ==
@@ -221,10 +222,7 @@ cities <- data.frame(
 cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"), crs = 4612)
 
 # Color palette - 十分な色数を確保（最大21色）
-PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F', 
-         '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32',
-         '#FFD700', '#FF69B4', '#00CED1', '#DA70D6', '#F0E68C', '#90EE90',
-         '#CD853F', '#4169E1', '#FF1493')
+PAL <- c('#666666', '#999999', '#CCCCCC', '#E5E5E5', '#000000', '#333333')
 
 # 既存のcooccurrence_plotを以下に置き換え
 cooccurrence_plot <- ggplot() +
@@ -258,22 +256,50 @@ cooccurrence_plot <- ggplot() +
           subtitle = paste0(ndists_new, " districts | ", k, " clusters | Top 10% of ", 
                           length(results_sample$draw), " plans"))
 
+# Color assignment for optimal plan - 集約済みデータを使用
+if(ndists_new > 6){
+  optimal_adj <- redist::redist.adjacency(optimal_boundary_aggregated)
+  optimal_boundary_colored <- optimal_boundary_aggregated %>%
+    mutate(color = redist:::color_graph(optimal_adj, as.integer(district)))
+} else {
+  optimal_boundary_colored <- optimal_boundary_aggregated %>%
+    mutate(color = district)
+}
+
+# Create optimal plan plot with clean municipality-level boundaries (モノクロ対応)
+cat("Creating optimal plan map with clean municipality-level boundaries...\n")
+optimal_max_to_min <- round(max(pop_by_district)/min(pop_by_district), 3)
+total_population <- sum(pop_by_district)
+
+
 # 既存のoptimal_plotを以下に置き換え
 optimal_plot <- ggplot() +
-  # Main polygons - 集約済みなので内部境界なし
-  geom_sf(data = optimal_boundary_colored, aes(fill = factor(color)), 
-          color = "white", size = 0.3) +
-  scale_fill_manual(values = PAL, guide = "none") +
+  geom_sf_pattern(data = optimal_boundary_colored, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01,
+                  pattern_size = 0.1) +
   
-  # Administrative boundaries (より太く、明確に)
-  geom_sf(data = boundary, aes(color = type, linetype = type, size = type),
-          show.legend = "line", fill = NA) +
+  scale_fill_grey(start = 0.8, end = 0.95, guide = "none") +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                   "none", "wave", "polygon_tiling",
+                                   "stripe", "circle", "crosshatch",
+                                   "none", "wave"), 
+                       guide = "none") +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                       "right45", "square", "triangle",
+                                       "vertical", "horizontal", "left45",
+                                       "right45"),
+                            guide = "none") +
+
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_size_manual(values = c(0.4, 0.7)) +
+  scale_discrete_manual("linewidth", values = c(0.4, 0.7)) +
   
-  # Cities and labels
-  geom_sf(data = cities, size = 3, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+  geom_sf(data = cities, size = 3, shape = 21, fill = "black", color = "white", stroke = 0.6) +
   geom_sf_text(data = cities, aes(label = names), size = 4,
               color = "black",
               nudge_x = c(0, 0.2, 0),
@@ -281,8 +307,7 @@ optimal_plot <- ggplot() +
               family = "sans", fontface = "bold") +
   
   theme_map() +
-  theme(legend.position = "right", 
-        legend.title = element_blank(),
+  theme(legend.position = "none", 
         plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 12)) +
   ggtitle(paste0("Optimal Plan (Minimum Population Deviation) - Hokkaido ", year, " Projection"),
@@ -291,21 +316,54 @@ optimal_plot <- ggplot() +
                           " | Total Pop: ", format(total_population, big.mark = ","), 
                           " | Draw: ", optimal))
 
+# Define Ishikari region codes
+ishikari_codes <- c(01101, 01102, 01103, 01104, 01105, 01106, 01107, 01108, 01109, 01110,
+                   01217, 01224, 01231, 01234, 01235, 01303, 01304)
+
+ishikari_optimal <- optimal_boundary_colored %>%
+  filter(code %in% ishikari_codes)
+
+ishikari_bbox <- sf::st_bbox(ishikari_optimal)
+
+# Filter boundary data for Ishikari region
+ishikari_boundary_filter <- boundary %>%
+  st_make_valid() %>%
+  st_crop(st_buffer(st_as_sfc(ishikari_bbox), dist = 0.01))
+
+
+
 # Ishikari zoom viewを以下に置き換え
-optimal_map_ishikari <- ggplot() +
-  geom_sf(data = ishikari_optimal, aes(fill = factor(color)), 
-          color = "white", size = 0.3) +
-  scale_fill_manual(values = PAL, guide = "none") +
+optimal_plot_ishikari <- ggplot() +
+  geom_sf_pattern(data = ishikari_optimal, 
+                  aes(fill = factor(color), 
+                      pattern = factor(color),
+                      pattern_type = factor(color)), 
+                  color = "black", size = 0.3,
+                  pattern_density = 0.1,
+                  pattern_spacing = 0.01,
+                  pattern_size = 0.1) +
+  
+  scale_fill_grey(start = 0.8, end = 0.95, guide = "none") +
+  scale_pattern_manual(values = c("stripe", "circle", "crosshatch", 
+                                   "none", "wave", "polygon_tiling",
+                                   "stripe", "circle", "crosshatch",
+                                   "none", "wave"), 
+                       guide = "none") +
+  scale_pattern_type_manual(values = c("vertical", "horizontal", "left45",
+                                       "right45", "square", "triangle",
+                                       "vertical", "horizontal", "left45",
+                                       "right45"),
+                            guide = "none") +
   
   geom_sf(data = ishikari_boundary_filter, 
-          aes(color = type, linetype = type, size = type),
-          show.legend = "line", fill = NA) +
+          aes(color = type, linetype = type, linewidth = type),
+          show.legend = FALSE, fill = NA) +
   scale_color_manual(values = c("#000000", "#333333")) +
   scale_linetype_manual(values = c("solid", "solid")) +
-  scale_size_manual(values = c(0.7, 0.9)) +
+  scale_discrete_manual("linewidth", values = c(0.7, 0.9)) +
   
   geom_sf(data = cities %>% filter(names == "Sapporo"), 
-          size = 4, shape = 21, fill = "red", color = "black", stroke = 0.4) +
+          size = 4, shape = 21, fill = "black", color = "white", stroke = 0.6) +
   geom_sf_text(data = cities %>% filter(names == "Sapporo"), 
               aes(label = names), size = 5,
               color = "black",
@@ -317,16 +375,18 @@ optimal_map_ishikari <- ggplot() +
            expand = FALSE) +
   
   theme_map() +
-  theme(legend.position = "right", 
-        legend.title = element_blank(),
+  theme(legend.position = "none", 
         plot.title = element_text(size = 16, face = "bold"),
         plot.subtitle = element_text(size = 12)) +
   ggtitle(paste0("Optimal Plan - Ishikari Region (Sapporo Area) - ", year),
           subtitle = paste0("Municipality-level aggregation | Zoomed view | Draw: ", optimal))
 
+
+print(optimal_plot)
 print(optimal_plot_ishikari)
 
-ggsave(filename = "hokkaido_ishikari_optimal_2050.png", plot = optimal_plot_ishikari, width = 10, height = 8, dpi = 300)
+ggsave(filename = "hokkaido_optimal_2050_conditional.png", plot = optimal_plot, width = 10, height = 8, dpi = 300, bg = "white")
+ggsave(filename = "hokkaido_ishikari_optimal_2050_conditional.png", plot = optimal_plot_ishikari, width = 10, height = 8, dpi = 300, bg = "white")
 # Save plots
 cat("Saving plots...\n")
 dir.create(here("data-out/co-occurrence"), recursive = TRUE, showWarnings = FALSE)

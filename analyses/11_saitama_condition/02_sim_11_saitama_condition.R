@@ -369,6 +369,8 @@ cat("Particles prepared for full simulation\n")
 
 # Set up constraints for full prefecture
 cat("Setting up constraints for full prefecture...\n")
+
+# 県単位での制約を除去
 # constr_pref = redist::redist_constr(pref_map_merged)
 # constr_pref = redist::add_constr_splits(constr_pref, strength = 1, admin = pref_map_merged$code)
 # constr_pref = redist::add_constr_multisplits(constr_pref, strength = 1, admin = pref_map_merged$code)

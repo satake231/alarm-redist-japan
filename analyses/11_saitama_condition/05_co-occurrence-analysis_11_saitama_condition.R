@@ -12,9 +12,40 @@ library(cluster)
 library(dplyr)
 library(sf)
 
+# Load necessary data
+cat("Loading required data...\n")
+
+# Load pref_shp_cleaned
+pref_shp_cleaned <- readRDS(here(paste("data-out/shapefile/",
+                                      pref_code, "_", pref_name, "_", 
+                                      year, "_shp_cleaned.Rds",
+                                      sep = "")))
+
+# Load pref data
+pref <- readRDS(here(paste("data-out/shapefile/",
+                          pref_code, "_", pref_name, "_", 
+                          year, ".Rds",
+                          sep = "")))
+
+# Check if results_sample exists
+if(!exists("results_sample")) {
+  stop("results_sample not found. Please run 03_post-processing first.")
+}
+
+if(!exists("sim_smc_pref_ref")) {
+  sim_smc_pref_ref <- readRDS(here(paste("data-out/smc-out/",
+                                        pref_code, "_", pref_name, "_", 
+                                        sim_type, "_", year, "_", 
+                                        nsims_all * 8, ".Rds",
+                                        sep = "")))
+}
+
+cat("All required data loaded successfully\n\n")
+
 # Find Optimal Plan
 optimal <- as.numeric(results_sample$draw[which(results_sample$max_to_min ==
                                       min(results_sample$max_to_min))][1])
+
 cat("Optimal plan found: draw", optimal, "with max_to_min ratio:", min(results_sample$max_to_min), "\n")
 
 # Display optimal plan details
@@ -72,8 +103,10 @@ optimal_boundary <- optimal_boundary_aggregated
 # Boundary data preparation
 cat("Creating boundary data safely...\n")
 
-# Municipality boundaries
-mun_boundary <- pref_shp_cleaned %>%
+# Create municipality boundaries from pref data
+cat("Creating boundary data from existing pref object...\n")
+
+mun_boundary <- pref %>%
   mutate(geometry = st_make_valid(geometry)) %>%
   group_by(code) %>%
   summarise(geometry = st_union(geometry), .groups = 'drop')
@@ -127,6 +160,21 @@ tryCatch({
 
 boundary <- bind_rows(mun_combined, gun_combined)
 boundary$type <- factor(boundary$type, levels = c("Municipality Boundaries", "County Boundaries"))
+
+# Calculate optimal plan statistics
+optimal_plan_data <- sim_smc_pref_ref %>% 
+  filter(draw == optimal) %>%
+  arrange(district)
+
+pop_by_district <- optimal_plan_data$total_pop
+optimal_max_to_min <- round(max(pop_by_district) / min(pop_by_district), 3)
+total_population <- sum(pop_by_district)
+
+cat("\n=== OPTIMAL PLAN STATISTICS ===\n")
+cat("Draw:", optimal, "\n")
+cat("Max-to-min ratio:", optimal_max_to_min, "\n")
+cat("Total population:", format(total_population, big.mark = ","), "\n")
+cat("Number of districts:", ndists_new, "\n\n")
 
 # Co-occurrence analysis
 cat("Calculating co-occurrence matrix...\n")
@@ -199,7 +247,7 @@ if(length(prec_clusters) == nrow(pref_map)) {
   pref_cooc_aggregated <- pref_map_aggregated %>%
     left_join(mun_membership, by = "code") %>%
     mutate(cooc_ratio = mun_cooc_ratio,
-           membership = ifelse(is.na(membership), 1, membership))
+          membership = ifelse(is.na(membership), 1, membership))
   
   if(ndists_new > 6){
     pref_cooc <- pref_cooc_aggregated %>%
@@ -223,9 +271,9 @@ cities <- sf::st_as_sf(cities, coords = c("longitude", "latitude"), crs = 4612)
 
 # Color palette
 PAL <- c('#6D9537', '#9A9BB9', '#DCAD35', '#7F4E28', '#2A4E45', '#364B7F', 
-         '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32',
-         '#FFD700', '#FF69B4', '#00CED1', '#DA70D6', '#F0E68C', '#90EE90',
-         '#CD853F', '#4169E1', '#FF1493')
+        '#8B4513', '#2F4F4F', '#800080', '#FF6347', '#4682B4', '#32CD32',
+        '#FFD700', '#FF69B4', '#00CED1', '#DA70D6', '#F0E68C', '#90EE90',
+        '#CD853F', '#4169E1', '#FF1493')
 # 04_partisan-analysis_11_saitama_condition.R の改善版
 
 # 共通テーマ設定を追加
@@ -247,7 +295,7 @@ p_dev <- redist.plot.hist(sim_smc_pref_sample, qty = plan_dev, bins = 15) +
     y = "Percentage of Plans",
     title = paste0("Population Deviation - Saitama ", year, " (Stricter Constraint)"),
     subtitle = paste0("District count: ", ndists_old, " → ", ndists_new, 
-                     " | pop_tol: ", pop_tol*100, "%"),
+                    " | pop_tol: ", pop_tol*100, "%"),
     caption = paste0("Based on ", length(unique(sim_smc_pref_sample$draw)), 
                     " simulated plans")
   ) +
@@ -303,9 +351,22 @@ cooccurrence_plot <- ggplot() +
   ggtitle(
     paste0("Co-occurrence Analysis - Saitama ", year, " (Stricter Constraint)"),
     subtitle = paste0(ndists_new, " districts | ", k, " clusters | ",
-                     "Top 10% of ", length(results_sample$draw), " plans | ",
-                     "pop_tol: ", pop_tol*100, "%")
+                    "Top 10% of ", length(results_sample$draw), " plans | ",
+                    "pop_tol: ", pop_tol*100, "%")
   )
+
+# optimal_boundary に色を付ける処理を追加（optimal_plot の前に）
+optimal_adj <- redist::redist.adjacency(optimal_boundary)
+
+if(ndists_new > 6){
+  optimal_boundary_colored <- optimal_boundary %>%
+    mutate(color = redist:::color_graph(optimal_adj, as.integer(district)))
+} else {
+  optimal_boundary_colored <- optimal_boundary %>%
+    mutate(color = district)
+}
+
+cat("Optimal boundary coloring completed\n")
 
 # Optimal plan plot（統一版）
 optimal_plot <- ggplot() +
@@ -336,10 +397,10 @@ optimal_plot <- ggplot() +
   ggtitle(
     paste0("Optimal Plan - Saitama ", year, " (Stricter Constraint)"),
     subtitle = paste0("1票の格差: ", optimal_max_to_min, 
-                     " | Districts: ", ndists_old, "→", ndists_new, 
-                     " | Pop: ", format(total_population, big.mark = ","), 
-                     " | Draw: ", optimal,
-                     " | pop_tol: ", pop_tol*100, "%")
+                    " | Districts: ", ndists_old, "→", ndists_new, 
+                    " | Pop: ", format(total_population, big.mark = ","), 
+                    " | Draw: ", optimal,
+                    " | pop_tol: ", pop_tol*100, "%")
   )
 
 print(optimal_plot)

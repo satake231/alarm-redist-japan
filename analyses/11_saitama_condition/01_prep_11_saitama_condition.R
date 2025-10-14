@@ -28,7 +28,7 @@ pref_name <- "saitama"
 lakes_removed <- c()
 ndists_new <- 17  # 2050年の予測される定数は17（現在の16から増加予定）
 ndists_old <- 16
-pop_tol <- 0.15 # 0.20 -> 0.15 に制約強化
+pop_tol <- 0.20
 lh_old_max_to_min <- 1.442
 lh_old_mun_split <- 8
 lh_old_gun_split <- 1
@@ -192,10 +192,10 @@ sum(pref_mun$pop, na.rm = TRUE)
 sum(pref_mun$nv_ldp, na.rm = TRUE)
 sum(pref_mun[[pop_col]], na.rm = TRUE)
 
-cat("\n=== SAITAMA FUTURE PREPARATION SUMMARY ===\n")
-cat("Projection year:", year, "\n")
-cat("District count change:", ndists_old, "→", ndists_new, "\n")
-cat("Expected population growth: ~10%\n")
-cat("Split municipalities:", length(c(split_code, split_code_lh_2022)), "\n")
-cat("Gun exceptions:", length(gun_exception), "\n")
-cat("Future population data prepared successfully!\n")
+# Save pref_shp_cleaned for later use
+saveRDS(pref_shp_cleaned, 
+        here(paste("data-out/shapefile/", 
+                   pref_code, "_", pref_name, "_", year, "_shp_cleaned.Rds", 
+                   sep = "")))
+
+cat("Saved: pref_shp_cleaned\n")
